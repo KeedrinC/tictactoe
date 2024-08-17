@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{"path": ".", "name": "tictactoe"},
+		{"path": "./backend", "name": "backend"},
+		{"path": "./frontend", "name": "frontend"},
+	],
+	"settings": {
+		"deno.enable": true,
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"**/node_modules": true,
+			"**/target": true,
+		}
+	},
+}
