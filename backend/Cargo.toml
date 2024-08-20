@@ -4,11 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+dotenv = "0.15.0"   # for accessing secret values
+# web and server related dependencies
+tokio = { version = "1.38.0", features = ["full"] }
+axum = { version = "0.7.5", features = ["ws"]}
+tower = { version = "0.4.13", features = ["limit", "buffer"]}
+tower-http = { version = "0.5.2", features = ["limit", "timeout"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+http-body-util = "0.1.2"
 
 [[bin]]
 name = "server"
-path = "src/server/mod.rs"
+path = "src/server.rs"
 
 [lib]
 name = "game"
-path = "src/game/mod.rs"
+path = "src/game.rs"
