@@ -20,7 +20,7 @@ http-body-util = "0.1.2"
 
 [[bin]]
 name = "server"
-path = "src/server.rs"
+path = "src/server/mod.rs"
 
 [lib]
 name = "game"
