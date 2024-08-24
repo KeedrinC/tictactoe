@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use serde::Serialize;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum Player {X, O}
 
 #[derive(Clone, Debug)]
@@ -12,11 +12,7 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Self {
-        let board: [Option<Player>; 9] = [
-            None, None, None,
-            None, None, None,
-            None, None, None,
-        ];
+        let board: [Option<Player>; 9] = [None; 9];
         let current_player: Option<Player> = Some(Player::X);
         Game { board, current_player }
     }
@@ -53,6 +49,12 @@ impl Game {
         };
         self.print_board();
         Ok(())
+    }
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
