@@ -1,10 +1,11 @@
 use std::fmt::Debug;
+use serde::Serialize;
 
-#[derive(Clone, Debug, PartialEq)]
-enum Player {X, O}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub enum Player {X, O}
 
-#[derive(Debug)]
-struct Game {
+#[derive(Clone, Debug)]
+pub struct Game {
     current_player: Option<Player>,
     pub board: [Option<Player>; 9]
 }
