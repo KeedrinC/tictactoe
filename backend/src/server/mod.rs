@@ -5,6 +5,8 @@ use realtime::process_messsage;
 use tokio::{net::TcpListener, sync::Mutex};
 use crate::realtime::AppState;
 
+#[cfg(test)]
+mod tests;
 mod realtime;
 
 #[tokio::main]
