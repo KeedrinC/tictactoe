@@ -43,7 +43,10 @@ async fn handle_socket<W, R>(
 {
     while let Some(Ok(message)) = receiver.next().await {
         if let Message::Text(message) = message {
-            let response =  process_messsage(message, socket_address, state.clone()).await.unwrap();
+            let response = match serde_json::from_str::<realtime::Message>(&message) {
+                Err(_) => todo!(),
+                Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
+            };
             if sender.send(Message::Text(response.to_string())).await.is_err() { break; }
         }
     }
