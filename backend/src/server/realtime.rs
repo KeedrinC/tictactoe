@@ -36,6 +36,15 @@ impl AppState {
         self.sessions.get(&token);
         Some(session.clone())
     }
+    pub async fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<Arc<Mutex<Session>>> {
+        let session = self.sessions.get_mut(token);
+        if let Some(session) = session {
+            let mut s = session.lock().await;
+            self.socket_session.remove(&s.address);
+            s.address = socket;
+            self.socket_session.insert(socket, session.clone());
+            Some(session.clone())
+        } else { None }
     }
     pub fn join_lobby(&mut self, session: &Session) -> Result<Option<&Lobby>, ()> {
         let lobby: &mut Lobby = self.session_lobby.get_mut(session).unwrap();
@@ -89,23 +98,31 @@ impl Session {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub enum Message { CreateLobby, JoinLobby(String), Nickname(String), Move(usize) }
-pub async fn process_messsage(message: String, socket: SocketAddr, state: Arc<Mutex<AppState>>) -> Result<Value, ()> {
+#[derive(Debug, Deserialize, PartialEq)]
+pub enum Message {
+    Connection { token: Option<String> },   // pass a token to resume session after a disconnect
+    CreateLobby,                            // creates a new lobby for the current session
+    JoinLobby(String),                      // moves the current session to an existing lobby
+    Nickname(String),                       // changes the nickname of the current session
+    Move(usize)                             // move the session to a spot in their game
+}
+
+pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<Mutex<AppState>>) -> Result<Value, ()> {
     let mut state = state.lock().await;
-    let session: Session = Session::new(String::from("nickname"), socket);
-    match serde_json::from_str::<Message>(&message) {
-        Err(_) => todo!(),
-        Ok(message) => {
-            match message {
-                Message::CreateLobby => {
-                    (*state).new_lobby(session);
-                    Ok(json!({"success": true}))
-                },
-                Message::JoinLobby(_) => todo!(),
-                Message::Nickname(_) => todo!(),
-                Message::Move(_) => todo!(),
+    match message {
+        Message::Connection { token } => {
+            let session = if let Some(token) = &token {
+                state.move_session(socket, token).await
+            } else { state.new_session(socket) };
+            match session {
+                Some(session) =>
+                    Ok(json!({"Connection": {"token": session.lock().await.id}})),
+                None => Err(()),
             }
         },
+        Message::CreateLobby => todo!(),
+        Message::JoinLobby(_) => todo!(),
+        Message::Nickname(_) => todo!(),
+        Message::Move(_) => todo!(),
     }
 }
