@@ -88,13 +88,18 @@ impl Lobby {
 #[derive(Clone, Serialize, PartialEq, Eq, Hash)]
 pub struct Session {
     pub id: String,
-    pub nickname: String,
+    pub nickname: Option<String>,
     pub address: SocketAddr,
 }
+
 impl Session {
-    pub fn new(nickname: String, address: SocketAddr) -> Session {
+    pub fn new(address: SocketAddr) -> Self {
         let id: String = String::from("0000");
+        let nickname: Option<String> = Some(String::from("nickname"));
         Session { id, nickname, address }
+    }
+    pub fn set_nickname(&mut self, nickname: &str) {
+        self.nickname = Some(String::from(nickname));
     }
 }
 
