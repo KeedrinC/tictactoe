@@ -8,18 +8,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone)]
 pub struct AppState {
     pub lobbies: HashMap<String, Lobby>,    // lobbies with currently active users
-    pub sessions: HashMap<String, Session>, // every connection creates a session object
-    pub session_lobby: HashMap<Session, Lobby>,   // map sessions to current lobbies for easy lookup
-    pub socket_session: HashMap<SocketAddr, Session>,   // map SocketAddr to Session for easy lookup
+    pub sessions: HashMap<String, Arc<Mutex<Session>>>, // every connection creates a session object
+    pub session_lobby: HashMap<Session, Lobby>, // map sessions to current lobbies for easy lookup
+    pub socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>>,   // map sockets to session for easy lookup
 }
 
 impl AppState {
     pub fn new() -> Self {
         let lobbies: HashMap<String, Lobby> = HashMap::new();
-        let sessions: HashMap<String, Session> = HashMap::new();
+        let sessions: HashMap<String, Arc<Mutex<Session>>> = HashMap::new();
         let session_lobby: HashMap<Session, Lobby> = HashMap::new();
-        let socket_session: HashMap<SocketAddr, Session> = HashMap::new();
-        AppState { lobbies, sessions, session_lobby, socket_session }
+        let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
+        AppState { lobbies, sessions, socket_session, session_lobby }
     }
     pub fn new_lobby(&mut self, initiator: Session) -> Result<(), ()> {
         // TODO: check if the initiator is already in a lobby, if so move them to a new lobby
@@ -27,9 +27,15 @@ impl AppState {
         self.lobbies.insert(lobby.id.clone(), lobby.clone());
         Ok(())
     }
-    pub fn new_session(&mut self, nickname: String, address: SocketAddr) -> Option<Session> {
-        let session: Session = Session::new(nickname, address);
-        self.sessions.insert(session.address.to_string(), session)
+    pub fn new_session(&mut self, socket: SocketAddr) -> Option<Arc<Mutex<Session>>> {
+        let session: Session = Session::new( socket);
+        let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
+        let token: String = String::from("random-uuid");
+        self.sessions.insert(token.clone(), session.clone());
+        self.socket_session.insert(socket, session.clone());
+        self.sessions.get(&token);
+        Some(session.clone())
+    }
     }
     pub fn join_lobby(&mut self, session: &Session) -> Result<Option<&Lobby>, ()> {
         let lobby: &mut Lobby = self.session_lobby.get_mut(session).unwrap();
