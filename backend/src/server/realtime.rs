@@ -73,8 +73,6 @@ impl Lobby {
             players: [Some((initiator, None)), None]
         }
     }
-}
-impl Lobby {
     pub fn start_game(&mut self) { todo!() }
     pub fn add_player(&mut self, player: &Session) { todo!() }
     pub fn remove_player(&mut self, player: &Session) { todo!() }
