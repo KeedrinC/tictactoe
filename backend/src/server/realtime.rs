@@ -27,7 +27,7 @@ impl AppState {
         self.lobbies.insert(lobby.id.clone(), lobby.clone());
         Ok(())
     }
-    pub fn new_session(&mut self, socket: SocketAddr) -> Option<Arc<Mutex<Session>>> {
+    pub async fn new_session(&mut self, socket: SocketAddr) -> Option<Arc<Mutex<Session>>> {
         let session: Session = Session::new( socket);
         let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
         let token: String = String::from("random-uuid");
