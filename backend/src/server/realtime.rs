@@ -30,10 +30,10 @@ impl AppState {
     pub async fn new_session(&mut self, socket: SocketAddr) -> Option<Arc<Mutex<Session>>> {
         let session: Session = Session::new( socket);
         let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
-        let token: String = String::from("random-uuid");
+        let token = &session.lock().await.token;
         self.sessions.insert(token.clone(), session.clone());
         self.socket_session.insert(socket, session.clone());
-        self.sessions.get(&token);
+        self.sessions.get(token);
         Some(session.clone())
     }
     pub async fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<Arc<Mutex<Session>>> {
@@ -83,18 +83,18 @@ impl Lobby {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct Session {
-    pub id: String,
+    pub token: String,
     pub nickname: Option<String>,
     pub address: SocketAddr,
 }
 
 impl Session {
     pub fn new(address: SocketAddr) -> Self {
-        let id: String = String::from("0000");
+        let token: String = String::from("random-uuid");
         let nickname: Option<String> = Some(String::from("nickname"));
-        Session { id, nickname, address }
+        Session { token, nickname, address }
     }
     pub fn set_nickname(&mut self, nickname: &str) {
         self.nickname = Some(String::from(nickname));
@@ -116,7 +116,7 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
         Message::Connection { token } => {
             let session = if let Some(token) = &token {
                 state.move_session(socket, token).await
-            } else { state.new_session(socket) };
+            } else { state.new_session(socket).await };
             match session {
                 Some(session) =>
                     Ok(json!({"Connection": {"token": session.lock().await.id}})),
