@@ -118,8 +118,13 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
                 state.move_session(socket, token).await
             } else { state.new_session(socket).await };
             match session {
-                Some(session) =>
-                    Ok(json!({"Connection": {"token": session.lock().await.id}})),
+                Some(session) => {
+                    let session = session.lock().await;
+                    Ok(json!({"Connection": {
+                        "nickname": session.nickname,
+                        "token": session.token,
+                    }}))
+                },
                 None => Err(()),
             }
         },
