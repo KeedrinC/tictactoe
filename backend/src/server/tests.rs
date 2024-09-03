@@ -1,6 +1,7 @@
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::{Arc, Mutex}};
 use axum::extract::ws::Message;
 use futures::{channel::mpsc::{Receiver, Sender}, SinkExt, StreamExt};
+use serde::Deserialize;
 use serde_json::json;
 use crate::{handle_socket, AppState};
 
@@ -21,11 +22,20 @@ async fn setup() -> (Sender<Result<Message, axum::Error>>, Receiver<Message>, Ar
 
 #[tokio::test]
 async fn test_new_connection() {
+    #[derive(Deserialize)]
+    struct Session { nickname: Option<String>, token: String }
     let (mut tx, mut rx, state) = setup().await;
     tx.send(Ok(Message::Text(json!({"Connection": {"nickname": "keedrin"}}).to_string()))).await.unwrap();
     let msg = match rx.next().await.unwrap() {
-        Message::Text(msg) => dbg!(msg),
+        Message::Text(msg) => msg,
         other => panic!("expected a text message but got {other:?}"),
     };
-    // assert_eq!(msg, realtime::Message::Connection { token: Some(String::from("random-uuid")) });
+    let state = state.lock().unwrap();
+    let response = serde_json::from_str::<Session>(&msg).unwrap();
+    let record = state.sessions.get(&response.token).unwrap().lock().unwrap();
+    let record = record.clone();
+    assert_eq!(record.token, response.token);
+    assert_eq!(record.nickname, response.nickname);
+    assert!(record.nickname.is_some());
+    assert_eq!(record.nickname.unwrap(), String::from("keedrin"));
 }
