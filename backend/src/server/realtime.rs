@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use serde_json::{json, Value};
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 use std::{collections::HashMap, net::SocketAddr};
 use game::{Game, Player};
 use serde::{Deserialize, Serialize};
@@ -21,40 +21,38 @@ impl AppState {
         let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
         AppState { lobbies, sessions, socket_session, session_lobby }
     }
-    pub fn new_lobby(&mut self, initiator: Session) -> Result<(), ()> {
+    pub fn new_lobby(&mut self, initiator: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
         // TODO: check if the initiator is already in a lobby, if so move them to a new lobby
-        let lobby: Lobby = Lobby::new(initiator);
+        let lobby: Lobby = Lobby::new(initiator.clone());
         self.lobbies.insert(lobby.id.clone(), lobby.clone());
-        Ok(())
+        self.lobbies.get_mut(&lobby.id)
     }
-    pub async fn new_session(&mut self, socket: SocketAddr) -> Option<Arc<Mutex<Session>>> {
+    pub fn new_session(&mut self, socket: SocketAddr) -> Option<&mut Arc<Mutex<Session>>> {
         let session: Session = Session::new( socket);
         let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
-        let token = &session.lock().await.token;
+        let token = &session.lock().unwrap().token;
         self.sessions.insert(token.clone(), session.clone());
         self.socket_session.insert(socket, session.clone());
-        self.sessions.get(token);
-        Some(session.clone())
+        self.sessions.get_mut(token)
     }
-    pub async fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<Arc<Mutex<Session>>> {
+    pub fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<&mut Arc<Mutex<Session>>> {
         let session = self.sessions.get_mut(token);
         if let Some(session) = session {
-            let mut s = session.lock().await;
+            let mut s = session.lock().unwrap();
             self.socket_session.remove(&s.address);
             s.address = socket;
             self.socket_session.insert(socket, session.clone());
-            Some(session.clone())
+            self.socket_session.get_mut(&socket)
         } else { None }
     }
-    pub fn join_lobby(&mut self, session: &Session) -> Result<Option<&Lobby>, ()> {
-        let lobby: &mut Lobby = self.session_lobby.get_mut(session).unwrap();
-        lobby.add_player(session);
-        Ok(Some(lobby))
+    pub fn join_lobby(&mut self, id: String, session: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
+        let lobby = self.lobbies.get_mut(&id).unwrap();
+        lobby.add_player(session.clone());
+        Some(lobby)
     }
-    pub fn leave_lobby(&mut self, session: &Session) -> Result<Option<&Lobby>, ()> {
-        let lobby: &mut Lobby = self.session_lobby.get_mut(session).unwrap();
-        lobby.remove_player(session);
-        Ok(None)
+    pub fn leave_lobby(&mut self, session: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
+        let lobby: &mut Lobby = self.session_lobby.get_mut(&session.lock().unwrap()).unwrap();
+        lobby.remove_player(session.clone())
     }
 }
 
@@ -62,11 +60,11 @@ impl AppState {
 pub struct Lobby {
     pub id: String,
     pub game: Option<Game>,
-    pub players: [Option<(Session, Option<Player>)>; 2]
+    pub players: [Option<(Arc<Mutex<Session>>, Option<Player>)>; 2]
 }
 
 impl Lobby {
-    fn new(initiator: Session) -> Self {
+    fn new(initiator: Arc<Mutex<Session>>) -> Self {
         Lobby {
             id: String::from("000000"),
             game: Some(Game::new()),
@@ -74,8 +72,8 @@ impl Lobby {
         }
     }
     pub fn start_game(&mut self) { todo!() }
-    pub fn add_player(&mut self, player: &Session) { todo!() }
-    pub fn remove_player(&mut self, player: &Session) { todo!() }
+    pub fn add_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
+    pub fn remove_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
     pub fn has_players(&self) -> bool {
         self.players
             .iter()
@@ -101,7 +99,7 @@ impl Session {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, Hash, PartialEq)]
 pub enum Message {
     Connection { token: Option<String> },   // pass a token to resume session after a disconnect
     CreateLobby,                            // creates a new lobby for the current session
@@ -111,22 +109,19 @@ pub enum Message {
 }
 
 pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<Mutex<AppState>>) -> Result<Value, ()> {
-    let mut state = state.lock().await;
+    let mut state = state.lock().unwrap();
     match message {
         Message::Connection { token } => {
             let session = if let Some(token) = &token {
-                state.move_session(socket, token).await
-            } else { state.new_session(socket).await };
-            match session {
-                Some(session) => {
-                    let session = session.lock().await;
-                    Ok(json!({"Connection": {
-                        "nickname": session.nickname,
-                        "token": session.token,
-                    }}))
-                },
-                None => Err(()),
-            }
+                state.move_session(socket, token)
+            } else { state.new_session(socket) };
+            if let Some(session) = session {
+                let mut session = session.lock().unwrap();
+                if let Some(nickname) = nickname {
+                    session.set_nickname(&nickname);
+                }
+                Ok(json!(*session))
+            } else { Err(()) }
         },
         Message::CreateLobby => todo!(),
         Message::JoinLobby(_) => todo!(),

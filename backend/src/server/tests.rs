@@ -1,8 +1,7 @@
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::Arc};
+use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::{Arc, Mutex}};
 use axum::extract::ws::Message;
 use futures::{channel::mpsc::{Receiver, Sender}, SinkExt, StreamExt};
 use serde_json::json;
-use tokio::sync::Mutex;
 use crate::{handle_socket, AppState};
 
 fn mock_state() -> AppState {
