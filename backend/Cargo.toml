@@ -17,6 +17,7 @@ tower-http = { version = "0.5.2", features = ["limit", "timeout"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 http-body-util = "0.1.2"
+rand = "0.8.5"
 
 [[bin]]
 name = "server"
