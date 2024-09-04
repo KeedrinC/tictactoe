@@ -6,7 +6,7 @@ use crate::session::Session;
 
 #[derive(Clone, Serialize)]
 pub struct Lobby {
-    pub id: String,
+    pub code: String,
     #[serde(skip)]
     pub game: Option<Game>,
     #[serde(skip)]
@@ -15,10 +15,15 @@ pub struct Lobby {
 
 impl Lobby {
     pub fn new(initiator: Arc<Mutex<Session>>) -> Self {
-        let x_or_o = thread_rng().gen_bool(0.5);
+        let mut rng = thread_rng();
+        let code = (0..4)
+            .map(|_| rng.gen_range(0..10))
+            .map(|n| n.to_string())
+            .collect::<String>();
+        let x_or_o = rng.gen_bool(0.5);
         let player = if x_or_o { Player:: X } else { Player::O };
         Lobby {
-            id: String::from("000000"),
+            code,
             game: Some(Game::new()),
             players: [Some((initiator, player)), None]
         }

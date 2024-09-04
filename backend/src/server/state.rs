@@ -22,8 +22,8 @@ impl AppState {
     }
     pub fn new_lobby(&mut self, initiator: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
         let lobby: Lobby = Lobby::new(initiator.clone());
-        self.lobbies.insert(lobby.id.clone(), lobby.clone());
-        let lobby = self.lobbies.get_mut(&lobby.id);
+        self.lobbies.insert(lobby.code.clone(), lobby.clone());
+        let lobby = self.lobbies.get_mut(&lobby.code);
         if let Some(lobby) = lobby {
             let session = &initiator.lock().unwrap().token;
             Some(self.session_lobby.entry(session.to_string()).and_modify(|l| {
