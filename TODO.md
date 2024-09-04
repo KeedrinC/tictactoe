@@ -1,0 +1,2 @@
+- rename backend to something more appropriate (maybe core? lib?)
+- add default starting player to Player::X or Player::O?
