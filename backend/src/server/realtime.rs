@@ -65,10 +65,12 @@ impl AppState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Lobby {
     pub id: String,
+    #[serde(skip)]
     pub game: Option<Game>,
+    #[serde(skip)]
     pub players: [Option<(Arc<Mutex<Session>>, Option<Player>)>; 2]
 }
 
@@ -94,6 +96,7 @@ impl Lobby {
 pub struct Session {
     pub token: String,
     pub nickname: Option<String>,
+    #[serde(skip)]
     pub address: SocketAddr,
 }
 
