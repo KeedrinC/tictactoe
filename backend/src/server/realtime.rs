@@ -71,15 +71,17 @@ pub struct Lobby {
     #[serde(skip)]
     pub game: Option<Game>,
     #[serde(skip)]
-    pub players: [Option<(Arc<Mutex<Session>>, Option<Player>)>; 2]
+    pub players: [Option<(Arc<Mutex<Session>>, Player)>; 2]
 }
 
 impl Lobby {
     fn new(initiator: Arc<Mutex<Session>>) -> Self {
+        let x_or_o = thread_rng().gen_bool(0.5);
+        let player = if x_or_o { Player:: X } else { Player::O };
         Lobby {
             id: String::from("000000"),
             game: Some(Game::new()),
-            players: [Some((initiator, None)), None]
+            players: [Some((initiator, player)), None]
         }
     }
     pub fn start_game(&mut self) { todo!() }
