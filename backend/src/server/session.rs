@@ -11,13 +11,13 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new(address: SocketAddr) -> Self {
+    pub fn new(address: SocketAddr, nickname: Option<String>) -> Self {
         let mut rng = thread_rng();
         let token: String = (&mut rng).sample_iter(Alphanumeric)
             .take(7)
             .map(char::from)
             .collect();
-        Session { token, nickname: None, address }
+        Session { token, nickname, address }
     }
     pub fn set_nickname(&mut self, nickname: &str) {
         self.nickname = Some(String::from(nickname));

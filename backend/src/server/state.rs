@@ -32,8 +32,8 @@ impl AppState {
             }).or_insert(lobby.clone()))
         } else { None }
     }
-    pub fn new_session(&mut self, socket: SocketAddr) -> Option<&mut Arc<Mutex<Session>>> {
-        let session: Session = Session::new( socket);
+    pub fn new_session(&mut self, socket: SocketAddr, nickname: Option<String>) -> Option<&mut Arc<Mutex<Session>>> {
+        let session: Session = Session::new(socket, nickname);
         let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
         let token = &session.lock().unwrap().token;
         self.sessions.insert(token.clone(), session.clone());

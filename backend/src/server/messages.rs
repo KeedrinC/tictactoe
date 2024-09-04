@@ -20,11 +20,9 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
         Message::Connection { nickname, token } => {
             let session = if let Some(token) = &token {
                 state.move_session(socket, token)
-            } else { state.new_session(socket) };
+            } else { state.new_session(socket, nickname.clone()) };
             if let Some(session) = session {
-                let mut session = session.lock().unwrap();
-                if let Some(nickname) = nickname { session.set_nickname(&nickname); }
-                Ok(json!(*session))
+                Ok(json!(**session))
             } else { Err(()) }
         },
         Message::CreateLobby => {
