@@ -1,12 +1,14 @@
 use std::{net::SocketAddr, sync::Arc, sync::Mutex};
 use axum::{extract::{ws::Message, ConnectInfo, State, WebSocketUpgrade}, response::Response, routing::get, Router};
 use futures::{Sink, SinkExt, Stream, StreamExt};
+use state::AppState;
 use tokio::net::TcpListener;
-use crate::realtime::{AppState, process_messsage};
+use crate::realtime::process_messsage;
 
 #[cfg(test)]
 mod tests;
 mod realtime;
+mod state;
 
 #[tokio::main]
 pub async fn main() {
