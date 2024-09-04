@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, sync::Mutex};
 use axum::{extract::{ws::Message, ConnectInfo, State, WebSocketUpgrade}, response::Response, routing::get, Router};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use tokio::net::TcpListener;
@@ -42,7 +42,7 @@ async fn handle_socket<W, R>(
 {
     while let Some(Ok(message)) = receiver.next().await {
         if let Message::Text(message) = message {
-            let response = match serde_json::from_str::<realtime::Message>(&message) {
+            let response: serde_json::Value = match serde_json::from_str::<realtime::Message>(&message) {
                 Err(_) => todo!(),
                 Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
             };
