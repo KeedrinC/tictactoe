@@ -7,6 +7,7 @@ use crate::realtime::process_messsage;
 
 #[cfg(test)]
 mod tests;
+mod lobby;
 mod realtime;
 mod state;
 
