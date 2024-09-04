@@ -32,22 +32,19 @@ async fn handshake(
     })
 }
 
-async fn handle_socket<W, R>(
+async fn handle_socket<
+    W: Sink<Message> + Unpin,
+    R: Stream<Item = Result<Message, axum::Error>> + Unpin>(
     mut sender: W, mut receiver: R,
     socket_address: SocketAddr,
     state: Arc<Mutex<AppState>>
-) where
-    W: Sink<Message> + Unpin,
-    R: Stream<Item = Result<Message, axum::Error>> + Unpin
-{
-    while let Some(Ok(message)) = receiver.next().await {
-        if let Message::Text(message) = message {
-            let response: serde_json::Value = match serde_json::from_str::<realtime::Message>(&message) {
-                Err(_) => todo!(),
-                Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
-            };
-            if sender.send(Message::Text(response.to_string())).await.is_err() { break; }
-        }
+) {
+    while let Some(Ok(Message::Text(message))) = receiver.next().await {
+        let response: serde_json::Value = match serde_json::from_str::<realtime::Message>(&message) {
+            Err(_) => todo!(),
+            Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
+        };
+        if sender.send(Message::Text(response.to_string())).await.is_err() { break; }
     }
 }
 
