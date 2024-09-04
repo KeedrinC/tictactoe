@@ -3,12 +3,12 @@ use axum::{extract::{ws::Message, ConnectInfo, State, WebSocketUpgrade}, respons
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use state::AppState;
 use tokio::net::TcpListener;
-use crate::realtime::process_messsage;
+use crate::messages::process_messsage;
 
 #[cfg(test)]
 mod tests;
 mod lobby;
-mod realtime;
+mod messages;
 mod session;
 mod state;
 
@@ -44,7 +44,7 @@ async fn handle_socket<
     state: Arc<Mutex<AppState>>
 ) {
     while let Some(Ok(Message::Text(message))) = receiver.next().await {
-        let response: serde_json::Value = match serde_json::from_str::<realtime::Message>(&message) {
+        let response: serde_json::Value = match serde_json::from_str::<messages::Message>(&message) {
             Err(_) => todo!(),
             Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
         };

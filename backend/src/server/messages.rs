@@ -9,7 +9,7 @@ use crate::state::AppState;
 pub enum Message {
     Connection { nickname: Option<String>, token: Option<String> },   // pass a token to resume session after a disconnect
     CreateLobby,                            // creates a new lobby for the current session
-    JoinLobby(String),                      // moves the current session to an existing lobby
+    JoinLobby { id: String },               // moves the current session to an existing lobby
     Nickname(String),                       // changes the nickname of the current session
     Move(usize)                             // move the session to a spot in their game
 }
@@ -27,8 +27,26 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
                 Ok(json!(*session))
             } else { Err(()) }
         },
-        Message::CreateLobby => todo!(),
-        Message::JoinLobby(_) => todo!(),
+        Message::CreateLobby => {
+            let initiator = state.socket_session.get_mut(&socket);
+            if let Some(session) = initiator {
+                let session = &mut session.clone();
+                let lobby = state.new_lobby(session);
+                if let Some(lobby) = lobby {
+                    Ok(json!(lobby))
+                } else { Err(()) }
+            } else { Err(()) }
+        },
+        Message::JoinLobby { id } => {
+            let initiator = state.socket_session.get_mut(&socket);
+            if let Some(session) = initiator {
+                let session = &mut session.clone();
+                let lobby = state.join_lobby(id, session);
+                if let Some(lobby) = lobby {
+                    Ok(json!(lobby))
+                } else { Err(()) }
+            } else { Err(()) }
+        },
         Message::Nickname(_) => todo!(),
         Message::Move(_) => todo!(),
     }
