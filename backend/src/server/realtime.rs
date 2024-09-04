@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use serde_json::{json, Value};
 use std::sync::Mutex;
 use std::{collections::HashMap, net::SocketAddr};
@@ -90,8 +92,12 @@ pub struct Session {
 
 impl Session {
     pub fn new(address: SocketAddr) -> Self {
-        let token: String = String::from("random-uuid");
         let nickname: Option<String> = Some(String::from("nickname"));
+        let mut rng = thread_rng();
+        let token: String = (&mut rng).sample_iter(Alphanumeric)
+            .take(7)
+            .map(char::from)
+            .collect();
         Session { token, nickname, address }
     }
     pub fn set_nickname(&mut self, nickname: &str) {
