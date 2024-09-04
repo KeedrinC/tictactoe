@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use game::{Game, Player};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
-use crate::realtime::Session;
+use crate::session::Session;
 
 #[derive(Clone, Serialize)]
 pub struct Lobby {

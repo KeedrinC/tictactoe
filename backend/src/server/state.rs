@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use crate::lobby::Lobby;
-use crate::realtime::Session;
+use crate::session::Session;
 
 #[derive(Clone)]
 pub struct AppState {

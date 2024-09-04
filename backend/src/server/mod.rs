@@ -9,6 +9,7 @@ use crate::realtime::process_messsage;
 mod tests;
 mod lobby;
 mod realtime;
+mod session;
 mod state;
 
 #[tokio::main]
