@@ -58,12 +58,11 @@ impl Default for Game {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::{Game, Player};
     #[test]
-    fn test_board() {
+    fn test_game() {
         let mut game: Game = Game::new();
         assert_eq!(game.current_player, Some(Player::X));
         assert!(game.board.iter().all(|x| x.is_none()));
