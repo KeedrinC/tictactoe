@@ -59,6 +59,14 @@ impl Lobby {
     pub fn has_players(&self) -> bool {
         self.players
             .iter()
-            .all(|p| p.is_none())
+            .any(|p| p.is_some())
+    }
+    pub fn player_count(&self) -> u8 {
+        self.players
+            .iter()
+            .fold(0, |acc, player|
+                acc + if player.is_some() { 1 } else { 0 })
+    }
+}
     }
 }
