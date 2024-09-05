@@ -27,9 +27,11 @@ impl Lobby {
             players: [Some((initiator, player)), None]
         }
     }
-    pub fn start_game(&mut self) { todo!() }
     pub fn add_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
     pub fn remove_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
+    pub fn start_game(&mut self) {
+        self.game = Some(Game::new());
+    }
     pub fn has_players(&self) -> bool {
         self.players
             .iter()
