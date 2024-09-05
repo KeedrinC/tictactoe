@@ -20,8 +20,7 @@ impl Lobby {
             .map(|_| rng.gen_range(0..10))
             .map(|n| n.to_string())
             .collect::<String>();
-        let x_or_o = rng.gen_bool(0.5);
-        let player = if x_or_o { Player:: X } else { Player::O };
+        let player: Player = if rng.gen_bool(0.5) { Player:: X } else { Player::O };
         Lobby {
             code,
             game: Some(Game::new()),
