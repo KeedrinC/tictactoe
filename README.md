@@ -5,10 +5,6 @@ This project is a real-time multiplayer Tic-Tac-Toe game built to demonstrate we
 Players can join a game, make moves, and see their opponent's moves instantly.
 Friends can share and join lobbies.
 
-## Project Status
-Very much a work in progress and still being actively worked on.
-At this point in time essentially everything still needs to be designed and implemented.
-
 ## Technologies
 - Rust (Backend)
 - Deno (JavaScript / TypeScript Runtime)
