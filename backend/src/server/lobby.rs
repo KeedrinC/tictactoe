@@ -27,10 +27,34 @@ impl Lobby {
             players: [Some((initiator, player)), None]
         }
     }
-    pub fn add_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
-    pub fn remove_player(&mut self, _player: Arc<Mutex<Session>>) -> Option<&mut Lobby> { todo!() }
     pub fn start_game(&mut self) {
         self.game = Some(Game::new());
+    }
+    pub fn add_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Lobby {
+        let p: Player = if thread_rng().gen_bool(0.5) { Player:: X } else { Player::O };
+        for x in 0..self.players.len() {
+            if self.players[x].is_none() {
+                self.players[x] = Some((player, p));
+                break;
+            }
+        }
+        self
+    }
+    pub fn remove_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Lobby {
+        let mut players: Vec<Option<(Arc<Mutex<Session>>, Player)>> = self.players
+            .iter()
+            .filter_map(|entry| {
+                if let Some((p, _)) = entry.clone() {
+                    if Arc::ptr_eq(&p, &player) {
+                        None
+                    } else { Some(entry.clone()) }
+                } else { None }
+            })
+            .collect();
+        let diff = self.players.len() - players.len();
+        for _ in 0..(diff) { players.push(None); }
+        self.players.clone_from_slice(&players[0..]);
+        self
     }
     pub fn has_players(&self) -> bool {
         self.players
