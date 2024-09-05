@@ -23,7 +23,7 @@ impl Lobby {
         let player: Player = if rng.gen_bool(0.5) { Player:: X } else { Player::O };
         Lobby {
             code,
-            game: Some(Game::new()),
+            game: None,
             players: [Some((initiator, player)), None]
         }
     }
