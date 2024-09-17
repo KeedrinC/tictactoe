@@ -20,6 +20,7 @@ impl AppState {
         let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
         AppState { lobbies, sessions, socket_session, session_lobby }
     }
+
     pub fn new_lobby(&mut self, initiator: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
         let lobby: Lobby = Lobby::new(initiator.clone());
         self.lobbies.insert(lobby.code.clone(), lobby.clone());
@@ -32,32 +33,39 @@ impl AppState {
             }).or_insert(lobby.clone()))
         } else { None }
     }
-    pub fn new_session(&mut self, socket: SocketAddr, nickname: Option<String>) -> Option<&mut Arc<Mutex<Session>>> {
+
+    pub fn new_session(&mut self, socket: SocketAddr, nickname: Option<String>) -> Option<Arc<Mutex<Session>>> {
         let session: Session = Session::new(socket, nickname);
         let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
         let token = &session.lock().unwrap().token;
         self.sessions.insert(token.clone(), session.clone());
         self.socket_session.insert(socket, session.clone());
-        self.sessions.get_mut(token)
+        self.sessions.get_mut(token).cloned()
     }
-    pub fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<&mut Arc<Mutex<Session>>> {
+
+    pub fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<Arc<Mutex<Session>>> {
         let session = self.sessions.get_mut(token);
         if let Some(session) = session {
             let mut s = session.lock().unwrap();
             self.socket_session.remove(&s.address);
             s.address = socket;
             self.socket_session.insert(socket, session.clone());
-            self.socket_session.get_mut(&socket)
+            self.socket_session.get_mut(&socket).cloned()
         } else { None }
     }
-    pub fn join_lobby(&mut self, id: String, session: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
-        let lobby = self.lobbies.get_mut(&id).unwrap();
+
+    pub fn join_lobby(&mut self, id: &str, session: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
+        let lobby = self.lobbies.get_mut(id).unwrap();
         lobby.add_player(session.clone());
         Some(lobby)
     }
+
     pub fn leave_lobby(&mut self, session: &mut Arc<Mutex<Session>>) -> Option<&mut Lobby> {
-        let token = &session.lock().unwrap().token;
-        let lobby: &mut Lobby = self.session_lobby.get_mut(token).unwrap();
-        lobby.remove_player(session.clone())
+        let session_id = &session.lock().unwrap().token;
+        if let Some(lobby) = self.lobbies.get_mut(session_id) {
+            lobby.remove_player(session.clone());
+            self.session_lobby.remove(session_id);
+            Some(lobby)
+        } else { None }
     }
 }

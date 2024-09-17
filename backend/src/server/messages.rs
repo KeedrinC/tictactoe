@@ -22,7 +22,7 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
                 state.move_session(socket, token)
             } else { state.new_session(socket, nickname.clone()) };
             if let Some(session) = session {
-                Ok(json!(**session))
+                Ok(json!(*session))
             } else { Err(()) }
         },
         Message::CreateLobby => {
@@ -39,7 +39,7 @@ pub async fn process_messsage(message: Message, socket: SocketAddr, state: Arc<M
             let initiator = state.socket_session.get_mut(&socket);
             if let Some(session) = initiator {
                 let session = &mut session.clone();
-                let lobby = state.join_lobby(id, session);
+                let lobby = state.join_lobby(&id, session);
                 if let Some(lobby) = lobby {
                     Ok(json!(lobby))
                 } else { Err(()) }
