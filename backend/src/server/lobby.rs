@@ -4,13 +4,19 @@ use rand::{thread_rng, Rng};
 use serde::Serialize;
 use crate::session::Session;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Lobby {
     pub code: String,
     #[serde(skip)]
     pub game: Option<Game>,
     #[serde(skip)]
     pub players: [Option<(Arc<Mutex<Session>>, Player)>; 2]
+}
+
+impl PartialEq for Lobby {
+    fn eq(&self, other: &Self) -> bool {
+        self.code == other.code
+    }
 }
 
 impl Lobby {
