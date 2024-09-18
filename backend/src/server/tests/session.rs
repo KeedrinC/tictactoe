@@ -1,18 +1,15 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use crate::session::Session;
+use crate::{session::Session, tests::utils::new_socket};
 
 #[test]
 fn test_new_session() {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
-    let session = Session::new(address, Some(String::from("keedrin")));
+    let session = Session::new(new_socket(1111), Some(String::from("keedrin")));
     assert!(session.nickname.is_some());
     assert_eq!(session.nickname, Some(String::from("keedrin")));
 }
 
 #[test]
 fn test_set_session_nickname() {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
-    let mut session = Session::new(address, Some(String::from("keedrin")));
+    let mut session = Session::new(new_socket(1111), Some(String::from("keedrin")));
     assert!(session.nickname.is_some());
     assert_eq!(session.nickname, Some(String::from("keedrin")));
     session.set_nickname("new_nickname");

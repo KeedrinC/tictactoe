@@ -1,7 +1,9 @@
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::{Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 use crate::{lobby::Lobby, session::Session};
+use super::utils::new_socket;
+
 fn setup_session() -> Arc<Mutex<Session>> {
-    let session = Session::new(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111), Some(String::from("keedrin")));
+    let session = Session::new(new_socket(1111), Some(String::from("keedrin")));
     Arc::new(Mutex::new(session))
 }
 #[test]
@@ -33,7 +35,7 @@ fn test_add_and_remove_player() {
 #[test]
 fn test_add_players() {
     let session = setup_session();
-    let second_session = Arc::new(Mutex::new(Session::new(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222), Some(String::from("keedrin2")))));
+    let second_session = Arc::new(Mutex::new(Session::new(new_socket(2222), Some(String::from("keedrin2")))));
     let mut lobby = Lobby::new(session.clone());
     lobby.remove_player(session.clone());
     assert!(!lobby.has_players());

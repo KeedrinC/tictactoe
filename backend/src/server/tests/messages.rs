@@ -1,16 +1,16 @@
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::{Arc, Mutex}};
+use std::{net::SocketAddr, sync::{Arc, Mutex}};
 use axum::extract::ws::Message;
 use futures::{channel::mpsc::{Receiver, Sender}, SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
-use crate::{handle_socket, AppState};
+use crate::{handle_socket, tests::utils::new_socket, AppState};
 
 fn mock_state() -> Arc<Mutex<AppState>> {
     Arc::new(Mutex::new(AppState::new()))
 }
 
 async fn setup(state: Arc<Mutex<AppState>>, connection: Option<SocketAddr>) -> (Sender<Result<Message, axum::Error>>, Receiver<Message>) {
-    let connection = connection.unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111));
+    let connection = connection.unwrap_or(new_socket(1111));
     let (socket_write, rx) = futures::channel::mpsc::channel(1024);
     let (tx, socket_read) = futures::channel::mpsc::channel(1024);
     tokio::spawn(handle_socket(socket_write, socket_read, connection, state));
@@ -23,10 +23,8 @@ async fn test_multiple_new_connections() {
     struct Session { nickname: Option<String>, token: String }
 
     let state = mock_state(); // shared state between connections
-    let (mut tx, mut rx)
-        = setup(state.clone(), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111))).await;
-    let (mut tx2, mut rx2)
-        = setup(state.clone(), Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222))).await;
+    let (mut tx, mut rx) = setup(state.clone(), Some(new_socket(1111))).await;
+    let (mut tx2, mut rx2) = setup(state.clone(), Some(new_socket(2222))).await;
 
     tx.send(Ok(Message::Text(json!({"Connection": {"nickname": "keedrin"}}).to_string()))).await.unwrap();
     tx2.send(Ok(Message::Text(json!({"Connection": {"nickname": "keedrin2"}}).to_string()))).await.unwrap();

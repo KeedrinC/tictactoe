@@ -1,15 +1,15 @@
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, sync::{Arc, Mutex}};
-use crate::{session::Session, state::AppState};
+use std::{net::SocketAddr, sync::{Arc, Mutex}};
+use crate::{session::Session, state::AppState, tests::utils::new_socket};
 
 fn test_session() -> Arc<Mutex<Session>> {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
+    let address: SocketAddr = new_socket(1111);
     Arc::new(Mutex::new(Session::new(address, Some(String::from("keedrin")))))
 }
 
 #[test]
 fn test_new_session() {
     let mut state: AppState = AppState::new();
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
+    let address = new_socket(1111);
     let session = state.new_session(address, Some(String::from("keedrin")));
     assert!(session.is_some());
     let session = session.unwrap();
@@ -19,14 +19,10 @@ fn test_new_session() {
 
 #[test]
 fn test_move_session() {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
-    let new_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 2222);
-    let different_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 3333);
-
     let mut state: AppState = AppState::new();
+    let (address, new_address, different_address) = (new_socket(1111), new_socket(2222), new_socket(3333));
     let first_connection = state.new_session(address, Some(String::from("keedrin"))).unwrap();
     let first_connection = first_connection.lock().unwrap().clone();
-
     let second_connection = state.move_session(new_address, &first_connection.token).unwrap();
     let second_connection = second_connection.lock().unwrap();
 
@@ -62,8 +58,7 @@ fn test_new_lobby() {
 #[test]
 fn test_join_lobby() {
     let mut state: AppState = AppState::new();
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
-    let mut session = state.new_session(address, Some(String::from("keedrin"))).unwrap();
+    let mut session = state.new_session(new_socket(1111), Some(String::from("keedrin"))).unwrap();
     let lobby = state.new_lobby(&mut session).unwrap().to_owned();
     state.join_lobby(&lobby.code, &mut session);
     let session = session.lock().unwrap();
@@ -77,9 +72,8 @@ fn test_join_lobby() {
 #[test]
 fn test_leave_lobby() {
     let mut state: AppState = AppState::new();
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1111);
-
-    let mut session = state.new_session(address, Some(String::from("keedrin"))).unwrap();
+    let mut session = state.new_session(new_socket(1111), Some(String::from("keedrin"))).unwrap();
+    let mut another_session: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("keedrin"))).unwrap();
     let lobby = state.new_lobby(&mut session).unwrap().to_owned();
 
     let s = session.clone();
