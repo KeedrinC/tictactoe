@@ -21,32 +21,29 @@ impl PartialEq for Lobby {
 
 impl Lobby {
     pub fn new(initiator: Arc<Mutex<Session>>) -> Self {
-        let mut rng = thread_rng();
         let code = (0..4)
-            .map(|_| rng.gen_range(0..10))
+            .map(|_| thread_rng().gen_range(0..10))
             .map(|n| n.to_string())
             .collect::<String>();
-        let player: Player = if rng.gen_bool(0.5) { Player:: X } else { Player::O };
-        Lobby {
-            code,
-            game: None,
-            players: [Some((initiator, player)), None]
-        }
+        let mut lobby = Lobby { code, game: None, players: [None, None] };
+        lobby.add_player(initiator);
+        lobby
     }
     pub fn start_game(&mut self) {
         self.game = Some(Game::new());
     }
-    pub fn add_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Lobby {
-        let p: Player = if thread_rng().gen_bool(0.5) { Player:: X } else { Player::O };
-        for x in 0..self.players.len() {
-            if self.players[x].is_none() {
-                self.players[x] = Some((player, p));
-                break;
-            }
-        }
+    pub fn add_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Self {
+        let index: usize = self.players[0].is_some() as usize;
+        self.players[index] = Some((player, match self.players[0] {
+            Some((_, player)) => match player {
+                Player::X => Player::O,
+                Player::O => Player::X,
+            },
+            None => [Player::X, Player::O][thread_rng().gen_bool(0.5) as usize]
+        }));
         self
     }
-    pub fn remove_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Lobby {
+    pub fn remove_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Self {
         let mut players: Vec<Option<(Arc<Mutex<Session>>, Player)>> = self.players
             .iter()
             .filter_map(|entry| {
