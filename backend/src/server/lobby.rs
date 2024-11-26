@@ -43,6 +43,13 @@ impl Lobby {
         }));
         self
     }
+    pub fn has_player(&self, session: Arc<Mutex<Session>>) -> bool {
+        self.players.iter().any(|player| {
+            if let Some(p) = player {
+                Arc::ptr_eq(&p.0, &session)
+            } else { false }
+        })
+    }
     pub fn remove_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Self {
         let mut players: Vec<Option<(Arc<Mutex<Session>>, Player)>> = self.players
             .iter()
