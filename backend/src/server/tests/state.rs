@@ -1,32 +1,31 @@
 use std::{net::SocketAddr, sync::{Arc, Mutex}};
-use crate::{session::Session, state::AppState, tests::utils::new_socket};
+use crate::{lobby::Lobby, session::Session, state::AppState, tests::utils::new_socket};
 
-fn test_session() -> Arc<Mutex<Session>> {
-    let address: SocketAddr = new_socket(1111);
-    Arc::new(Mutex::new(Session::new(address, Some(String::from("keedrin")))))
-}
+// TODO: make separate modules for each group of tests
+// TODO: lobby exists function to share between join_lobby, etc.
 
 #[test]
 fn test_new_session() {
     let mut state: AppState = AppState::new();
-    let address = new_socket(1111);
-    let session = state.new_session(address, Some(String::from("keedrin")));
-    assert!(session.is_some());
-    let session = session.unwrap();
+    let session = state.new_session(
+        new_socket(1111),
+        Some(String::from("keedrin")));
     let session = session.lock().unwrap();
-    assert_eq!(session.address, address);
+
+    assert_eq!(session.address.port(), 1111);
+    assert_eq!(session.nickname, Some("keedrin".to_string()));
 }
 
 #[test]
 fn test_move_session() {
     let mut state: AppState = AppState::new();
     let (address, new_address, different_address) = (new_socket(1111), new_socket(2222), new_socket(3333));
-    let first_connection = state.new_session(address, Some(String::from("keedrin"))).unwrap();
+    let first_connection = state.new_session(address, Some(String::from("keedrin")));
     let first_connection = first_connection.lock().unwrap().clone();
     let second_connection = state.move_session(new_address, &first_connection.token).unwrap();
     let second_connection = second_connection.lock().unwrap();
 
-    let different_connection = state.new_session(different_address, Some(String::from("keedrin"))).unwrap();
+    let different_connection = state.new_session(different_address, Some(String::from("keedrin")));
     let different_connection = different_connection.lock().unwrap().clone();
 
     assert_eq!(first_connection.address, address);
@@ -44,49 +43,109 @@ fn test_move_session() {
 #[test]
 fn test_new_lobby() {
     let mut state: AppState = AppState::new();
-    let mut session: Arc<Mutex<Session>> = test_session();
-    let lobby = state.new_lobby(&mut session).unwrap();
-    let lobby = lobby.clone();
-    let session = session.lock().unwrap();
+    let session: Arc<Mutex<Session>> = state.new_session(new_socket(1111), Some(String::from("player")));
+    let lobby: Arc<Mutex<Lobby>> = state.new_lobby(session.clone());
 
-    assert!(state.lobbies.contains_key(&lobby.code));
-    assert!(state.session_lobby.contains_key(&session.token));
-    assert_eq!(state.lobbies.get(&lobby.code), Some(&lobby));
-    assert_eq!(state.session_lobby.get(&*session.token), Some(&lobby));
+    let code = &lobby.lock().unwrap().code;
+    let token = &session.lock().unwrap().token;
+    assert!(state.lobbies.contains_key(code));
+    assert!(state.session_lobby.contains_key(token));
+
+    assert!(!state.lobbies.contains_key("random_code"));
+    assert!(!state.session_lobby.contains_key("random_token"));
+    assert!(Arc::ptr_eq(state.lobbies.get(code).unwrap(), &lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(token).unwrap(), &lobby));
+    // TODO: test to see if the contain the same users
 }
 
 #[test]
-fn test_join_lobby() {
+fn test_join_lobby_and_leaves_previous_lobby() {
     let mut state: AppState = AppState::new();
-    let mut session = state.new_session(new_socket(1111), Some(String::from("keedrin"))).unwrap();
-    let lobby = state.new_lobby(&mut session).unwrap().to_owned();
-    state.join_lobby(&lobby.code, &mut session);
-    let session = session.lock().unwrap();
+    let player: Arc<Mutex<Session>> = state.new_session(new_socket(1111), Some(String::from("player")));
+    let friend: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("friend")));
+    let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
+    let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
+    
+    let player_token = player.lock().unwrap().token.clone();
+    let friend_token = friend.lock().unwrap().token.clone();
+    let player_lobby_guard = player_lobby.lock().unwrap().clone();
+    let friend_lobby_guard = friend_lobby.lock().unwrap().clone();
+    let player_lobby_code: &String = &player_lobby_guard.code.clone();
+    let friend_lobby_code: &String = &friend_lobby_guard.code.clone();
 
-    assert!(state.lobbies.contains_key(&lobby.code));
-    assert!(state.session_lobby.contains_key(&session.token));
-    assert_eq!(state.lobbies.get(&lobby.code), Some(&lobby));
-    assert_eq!(state.session_lobby.get(&*session.token), Some(&lobby));
+    assert_eq!(state.lobbies.len(), 2); // player and friend have their own separate lobbies
+    assert_eq!(player_lobby_guard.player_count(), 1); // player in their own created lobby
+    assert_eq!(friend_lobby_guard.player_count(), 1); // friend in their own created lobby
+
+    // Make sure both lobbies exist in the state object
+    assert!(state.lobbies.contains_key(player_lobby_code));
+    assert!(state.lobbies.contains_key(friend_lobby_code));
+    assert!(state.session_lobby.contains_key(&player_token));
+    assert!(state.session_lobby.contains_key(&friend_token));
+
+    // Make sure the pointers in the lobbies HashMaps point to the same pointers we created to test
+    assert!(Arc::ptr_eq(state.lobbies.get(player_lobby_code).unwrap(), &player_lobby));
+    assert!(Arc::ptr_eq(state.lobbies.get(friend_lobby_code).unwrap(), &friend_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&player_token).unwrap(), &player_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&friend_token).unwrap(), &friend_lobby));
+
+    // player wants to join friend's lobby, so we use the join_lobby function
+    state.join_lobby(friend_lobby_code, player.clone()).unwrap();
+
+    assert_eq!(state.lobbies.len(), 1);
+    assert!(!state.lobbies.contains_key(player_lobby_code)); // player's previous lobby shouldn't exist anymore
+    assert!(state.lobbies.contains_key(friend_lobby_code)); // friend's lobby should still exist
+    assert!(Arc::ptr_eq(state.lobbies.get(friend_lobby_code).unwrap(), &friend_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&player_token).unwrap(), &friend_lobby)); // both players are in friend's lobby
+    assert!(Arc::ptr_eq(state.session_lobby.get(&friend_token).unwrap(), &friend_lobby));
+    let lobby = state.lobbies.get(friend_lobby_code).unwrap().lock().unwrap();
+    assert_eq!(lobby.player_count(), 2); // both should now be in the lobby
 }
 
 #[test]
 fn test_leave_lobby() {
     let mut state: AppState = AppState::new();
-    let mut session = state.new_session(new_socket(1111), Some(String::from("keedrin"))).unwrap();
-    let mut another_session: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("keedrin"))).unwrap();
-    let lobby = state.new_lobby(&mut session).unwrap().to_owned();
+    let player: Arc<Mutex<Session>> = state.new_session(new_socket(1111), Some(String::from("player")));
+    let friend: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("friend")));
+    let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
+    let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
+    
+    let player_token = player.lock().unwrap().token.clone();
+    let friend_token = friend.lock().unwrap().token.clone();
+    let player_lobby_guard = player_lobby.lock().unwrap().clone();
+    let friend_lobby_guard = friend_lobby.lock().unwrap().clone();
+    let player_lobby_code: &String = &player_lobby_guard.code.clone();
+    let friend_lobby_code: &String = &friend_lobby_guard.code.clone();
 
-    let s = session.clone();
-    let s = (*s).lock().unwrap();
-    
-    state.join_lobby(&lobby.code, &mut session);
-    assert_eq!(state.lobbies.get(&lobby.code), Some(&lobby));
-    assert_eq!(state.session_lobby.get(&*s.token), Some(&lobby));
-    
-    drop(s);
-    state.leave_lobby(&mut session);
-    // assert!(state.lobbies.contains_key(&lobby.code));
-    // assert!(state.session_lobby.contains_key(&s.token));
-    // assert_eq!(state.lobbies.get(&lobby.code), None);
-    // assert_eq!(state.session_lobby.get(&*s.token), None);
+    assert_eq!(state.lobbies.len(), 2); // player and friend have their own separate lobbies
+    assert_eq!(player_lobby_guard.player_count(), 1); // player in their own created lobby
+    assert_eq!(friend_lobby_guard.player_count(), 1); // friend in their own created lobby
+
+    // Make sure both lobbies exist in the state object
+    assert!(state.lobbies.contains_key(player_lobby_code));
+    assert!(state.lobbies.contains_key(friend_lobby_code));
+    assert!(state.session_lobby.contains_key(&player_token));
+    assert!(state.session_lobby.contains_key(&friend_token));
+
+    // Make sure the pointers in the lobbies HashMaps point to the same pointers we created to test
+    assert!(Arc::ptr_eq(state.lobbies.get(player_lobby_code).unwrap(), &player_lobby));
+    assert!(Arc::ptr_eq(state.lobbies.get(friend_lobby_code).unwrap(), &friend_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&player_token).unwrap(), &player_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&friend_token).unwrap(), &friend_lobby));
+
+    // player wants to join friend's lobby, so we use the join_lobby function
+    state.join_lobby(friend_lobby_code, player.clone()).unwrap();
+
+    assert_eq!(state.lobbies.len(), 1);
+    assert!(!state.lobbies.contains_key(player_lobby_code)); // player's previous lobby shouldn't exist anymore
+    assert!(state.lobbies.contains_key(friend_lobby_code)); // friend's lobby should still exist
+    assert!(Arc::ptr_eq(state.lobbies.get(friend_lobby_code).unwrap(), &friend_lobby));
+    assert!(Arc::ptr_eq(state.session_lobby.get(&player_token).unwrap(), &friend_lobby)); // both players are in friend's lobby
+    assert!(Arc::ptr_eq(state.session_lobby.get(&friend_token).unwrap(), &friend_lobby));
+
+    assert_eq!(friend_lobby.lock().unwrap().player_count(), 2); // both should now be in the friend's lobby
+    let _ = state.leave_lobby(player.clone()); // should be one player left, we only remove the session_lobby entry
+
+    assert_eq!(friend_lobby.lock().unwrap().player_count(), 1); // both should now be in the friend's lobby
+    let _ = state.leave_lobby(player.clone()); // should be no players left, we the session_lobby entry and lobbies entry
 }
