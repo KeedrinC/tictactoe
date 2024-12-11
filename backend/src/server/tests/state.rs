@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::{Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 use crate::{lobby::Lobby, session::Session, state::AppState, tests::utils::new_socket};
 
 // TODO: make separate modules for each group of tests

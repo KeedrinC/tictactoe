@@ -20,7 +20,6 @@ impl AppState {
         let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
         AppState { lobbies, sessions, socket_session, session_lobby }
     }
-
     pub fn new_lobby(&mut self, player_session: Arc<Mutex<Session>>) -> Arc<Mutex<Lobby>> {
         let lobby: Lobby = Lobby::new(player_session.clone());
         let new_lobby = Arc::new(Mutex::new(lobby.clone()));
@@ -52,7 +51,6 @@ impl AppState {
         } else { None }
     }
 
-    // the commented lines do not work
     pub fn join_lobby(&mut self, lobby_code: &str, player_session: Arc<Mutex<Session>>) -> Result<Arc<Mutex<Lobby>>, ()> {
         if !self.lobbies.contains_key(lobby_code) { return Err(()); }
         let session_token = player_session.lock().unwrap().token.clone();
@@ -69,6 +67,7 @@ impl AppState {
         });
         Ok(lobby)
     }
+
     pub fn leave_lobby(&mut self, session: Arc<Mutex<Session>>) -> Result<Option<Arc<Mutex<Lobby>>>, ()> {
         let session_token = session.lock().unwrap().token.clone();
         if let Some(lobby) = self.session_lobby.get(&session_token) {
