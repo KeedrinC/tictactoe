@@ -12,7 +12,7 @@ fn test_new_session() {
         Some(String::from("keedrin")));
     let session = session.lock().unwrap();
 
-    assert_eq!(session.address.port(), 1111);
+    assert_eq!(session.socket.port(), 1111);
     assert_eq!(session.nickname, Some("keedrin".to_string()));
 }
 
@@ -22,22 +22,22 @@ fn test_move_session() {
     let (address, new_address, different_address) = (new_socket(1111), new_socket(2222), new_socket(3333));
     let first_connection = state.new_session(address, Some(String::from("keedrin")));
     let first_connection = first_connection.lock().unwrap().clone();
-    let second_connection = state.move_session(new_address, &first_connection.token).unwrap();
+    let second_connection = state.move_session(new_address, &first_connection.access_token).unwrap();
     let second_connection = second_connection.lock().unwrap();
 
     let different_connection = state.new_session(different_address, Some(String::from("keedrin")));
     let different_connection = different_connection.lock().unwrap().clone();
 
-    assert_eq!(first_connection.address, address);
-    assert_ne!(first_connection.address, new_address);
-    assert_ne!(first_connection.address, different_address);
+    assert_eq!(first_connection.socket, address);
+    assert_ne!(first_connection.socket, new_address);
+    assert_ne!(first_connection.socket, different_address);
 
-    assert_eq!(second_connection.address, new_address);
-    assert_ne!(second_connection.address, address);
-    assert_ne!(second_connection.address, different_address);
+    assert_eq!(second_connection.socket, new_address);
+    assert_ne!(second_connection.socket, address);
+    assert_ne!(second_connection.socket, different_address);
 
-    assert_eq!(first_connection.token, second_connection.token);
-    assert_ne!(first_connection.token, different_connection.token);
+    assert_eq!(first_connection.access_token, second_connection.access_token);
+    assert_ne!(first_connection.access_token, different_connection.access_token);
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_new_lobby() {
     let lobby: Arc<Mutex<Lobby>> = state.new_lobby(session.clone());
 
     let code = &lobby.lock().unwrap().code;
-    let token = &session.lock().unwrap().token;
+    let token = &session.lock().unwrap().access_token;
     assert!(state.lobbies.contains_key(code));
     assert!(state.session_lobby.contains_key(token));
 
@@ -66,8 +66,8 @@ fn test_join_lobby_and_leaves_previous_lobby() {
     let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
     let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
     
-    let player_token = player.lock().unwrap().token.clone();
-    let friend_token = friend.lock().unwrap().token.clone();
+    let player_token = player.lock().unwrap().access_token.clone();
+    let friend_token = friend.lock().unwrap().access_token.clone();
     let player_lobby_guard = player_lobby.lock().unwrap().clone();
     let friend_lobby_guard = friend_lobby.lock().unwrap().clone();
     let player_lobby_code: &String = &player_lobby_guard.code.clone();
@@ -110,8 +110,8 @@ fn test_leave_lobby() {
     let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
     let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
     
-    let player_token = player.lock().unwrap().token.clone();
-    let friend_token = friend.lock().unwrap().token.clone();
+    let player_token = player.lock().unwrap().access_token.clone();
+    let friend_token = friend.lock().unwrap().access_token.clone();
     let player_lobby_guard = player_lobby.lock().unwrap().clone();
     let friend_lobby_guard = friend_lobby.lock().unwrap().clone();
     let player_lobby_code: &String = &player_lobby_guard.code.clone();

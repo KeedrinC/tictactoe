@@ -43,7 +43,7 @@ async fn test_multiple_new_connections() {
     let record = state.sessions.get(&response.token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
-    assert_eq!(record.token, response.token);
+    assert_eq!(record.access_token, response.token);
     assert_eq!(record.nickname, response.nickname);
     assert!(record.nickname.is_some());
     assert_eq!(record.nickname.unwrap(), String::from("keedrin"));
@@ -52,7 +52,7 @@ async fn test_multiple_new_connections() {
     let record = state.sessions.get(&response.token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
-    assert_eq!(record.token, response.token);
+    assert_eq!(record.access_token, response.token);
     assert_eq!(record.nickname, response.nickname);
     assert!(record.nickname.is_some());
     assert_eq!(record.nickname.unwrap(), String::from("keedrin2"));

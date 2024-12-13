@@ -44,8 +44,8 @@ impl AppState {
         let session = self.sessions.get_mut(token);
         if let Some(session) = session {
             let mut s = session.lock().unwrap();
-            self.socket_session.remove(&s.address);
-            s.address = socket;
+            self.socket_session.remove(&s.socket);
+            s.socket = socket;
             self.socket_session.insert(socket, session.clone());
             self.socket_session.get_mut(&socket).cloned()
         } else { None }
@@ -69,7 +69,7 @@ impl AppState {
     }
 
     pub fn leave_lobby(&mut self, session: Arc<Mutex<Session>>) -> Result<Option<Arc<Mutex<Lobby>>>, ()> {
-        let session_token = session.lock().unwrap().token.clone();
+        let session_token = session.lock().unwrap().access_token.clone();
         if let Some(lobby) = self.session_lobby.get(&session_token) {
             if let Ok(mut lobby_guard) = lobby.lock() {
                 if lobby_guard.has_player(session.clone()) {
