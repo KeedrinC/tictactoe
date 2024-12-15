@@ -30,7 +30,9 @@ impl Lobby {
         lobby
     }
     pub fn start_game(&mut self) {
-        self.game = Some(Game::new());
+        if self.player_count() == 2 {
+            self.game = Some(Game::new());
+        }
     }
     pub fn add_player(&mut self, player: Arc<Mutex<Session>>) -> &mut Self {
         let index: usize = self.players[0].is_some() as usize;

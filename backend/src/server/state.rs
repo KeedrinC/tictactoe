@@ -14,51 +14,55 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        // initialize each of the server's objects
         let lobbies: HashMap<String, Arc<Mutex<Lobby>>> = HashMap::new();
         let sessions: HashMap<String, Arc<Mutex<Session>>> = HashMap::new();
         let session_lobby: HashMap<String, Arc<Mutex<Lobby>>> = HashMap::new();
         let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
         AppState { lobbies, sessions, socket_session, session_lobby }
     }
+
     pub fn new_lobby(&mut self, player_session: Arc<Mutex<Session>>) -> Arc<Mutex<Lobby>> {
-        let lobby: Lobby = Lobby::new(player_session.clone());
-        let new_lobby = Arc::new(Mutex::new(lobby.clone()));
-        let session_token = player_session.lock().unwrap().token.clone();
-        // now make sure the lobby is in both self.lobbies and self.session_lobby
-        let _ = self.leave_lobby(player_session.clone());
+        let lobby: Lobby = Lobby::new(player_session.clone()); // create new lobby
+        let new_lobby: Arc<Mutex<Lobby>> = Arc::new(Mutex::new(lobby.clone()));
+        let session_token: String = player_session.lock().unwrap().access_token.clone();
+        if self.session_lobby.contains_key(&session_token) {
+            self.leave_lobby(player_session.clone()) // leave the previous lobby 
+        }
+        // add to both self.lobbies and self.session_lobby for lobby lookup using session
         self.lobbies.insert(lobby.code, new_lobby.clone());
         self.session_lobby.insert(session_token, new_lobby.clone());
         new_lobby
     }
 
     pub fn new_session(&mut self, socket: SocketAddr, nickname: Option<String>) -> Arc<Mutex<Session>> {
-        let session: Session = Session::new(socket, nickname);
-        let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(session));
-        let token: String = session.lock().unwrap().token.clone();
+        let session: Arc<Mutex<Session>> = Arc::new(Mutex::new(Session::new(socket, nickname)));
+        let token: String = session.lock().unwrap().access_token.clone();
+        // add to both self.sessions and self.socket_session for session lookup using the socket
         self.sessions.insert(token.clone(), session.clone());
         self.socket_session.insert(socket, session.clone());
         session
     }
 
     pub fn move_session(&mut self, socket: SocketAddr, token: &str) -> Option<Arc<Mutex<Session>>> {
-        let session = self.sessions.get_mut(token);
+        let session = self.sessions.get_mut(token); // get session using token
         if let Some(session) = session {
             let mut s = session.lock().unwrap();
-            self.socket_session.remove(&s.socket);
-            s.socket = socket;
-            self.socket_session.insert(socket, session.clone());
-            self.socket_session.get_mut(&socket).cloned()
+            self.socket_session.remove(&s.socket); // remove the previous socket address, client is using a different address
+            s.socket = socket; // use new socket now
+            self.socket_session.insert(socket, session.clone()); // and add it to the hashmap to find the session using the new address
+            Some(session.clone())
         } else { None }
     }
 
     pub fn join_lobby(&mut self, lobby_code: &str, player_session: Arc<Mutex<Session>>) -> Result<Arc<Mutex<Lobby>>, ()> {
         if !self.lobbies.contains_key(lobby_code) { return Err(()); }
-        let session_token = player_session.lock().unwrap().token.clone();
+        let session_token: String = player_session.lock().unwrap().access_token.clone();
         // Check if the session is already in a session, then leave it
         if self.session_lobby.contains_key(&session_token) {
-            let _ = self.leave_lobby(player_session.clone());
+            self.leave_lobby(player_session.clone());
         };
-        let lobby = self.lobbies.get(lobby_code).unwrap().clone();
+        let lobby = self.lobbies.get(lobby_code).ok_or(()).cloned()?;
         // Now that the user isn't in a session, add them to a session and insert into session_lobby
         self.session_lobby.insert(session_token, lobby.clone());
         self.lobbies.entry(lobby_code.to_string()).and_modify(|lobby| {
@@ -68,20 +72,20 @@ impl AppState {
         Ok(lobby)
     }
 
-    pub fn leave_lobby(&mut self, session: Arc<Mutex<Session>>) -> Result<Option<Arc<Mutex<Lobby>>>, ()> {
+    /// Check if the user is currently in a lobby, and remove them from the lobby if they are.
+    pub fn leave_lobby(&mut self, session: Arc<Mutex<Session>>) {
         let session_token = session.lock().unwrap().access_token.clone();
-        if let Some(lobby) = self.session_lobby.get(&session_token) {
-            if let Ok(mut lobby_guard) = lobby.lock() {
-                if lobby_guard.has_player(session.clone()) {
-                    lobby_guard.remove_player(session.clone());
-                    if lobby_guard.player_count() == 0 {
-                        self.lobbies.remove(&lobby_guard.code);
-                    }
+        let previous_lobby = self.session_lobby.get(&session_token).cloned();
+        if let Some(lobby) = previous_lobby {
+            let mut lobby_guard = lobby.lock().unwrap();
+            if lobby_guard.has_player(session.clone()) {
+                lobby_guard.remove_player(session.clone());
+                // If the lobby becomes empty, remove it from the list of lobbies
+                if !lobby_guard.has_players() {
+                    self.lobbies.remove(&lobby_guard.code);
                 }
-                return Ok(None);
             }
+            self.session_lobby.remove(&session_token);
         }
-        self.session_lobby.remove(&session_token);
-        Err(())
     }
 }
