@@ -20,7 +20,7 @@ async fn setup(state: Arc<Mutex<AppState>>, connection: Option<SocketAddr>) -> (
 #[tokio::test]
 async fn test_multiple_new_connections() {
     #[derive(Debug, Deserialize)]
-    struct Session { nickname: Option<String>, token: String }
+    struct Session { nickname: Option<String>, access_token: String }
 
     let state = mock_state(); // shared state between connections
     let (mut tx, mut rx) = setup(state.clone(), Some(new_socket(1111))).await;
@@ -40,19 +40,19 @@ async fn test_multiple_new_connections() {
 
     let state = state.lock().unwrap();
     let response = serde_json::from_str::<Session>(&msg).unwrap();
-    let record = state.sessions.get(&response.token);
+    let record = state.sessions.get(&response.access_token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
-    assert_eq!(record.access_token, response.token);
+    assert_eq!(record.access_token, response.access_token);
     assert_eq!(record.nickname, response.nickname);
     assert!(record.nickname.is_some());
     assert_eq!(record.nickname.unwrap(), String::from("keedrin"));
 
     let response = serde_json::from_str::<Session>(&msg2).unwrap();
-    let record = state.sessions.get(&response.token);
+    let record = state.sessions.get(&response.access_token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
-    assert_eq!(record.access_token, response.token);
+    assert_eq!(record.access_token, response.access_token);
     assert_eq!(record.nickname, response.nickname);
     assert!(record.nickname.is_some());
     assert_eq!(record.nickname.unwrap(), String::from("keedrin2"));

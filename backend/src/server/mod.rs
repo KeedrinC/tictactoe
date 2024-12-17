@@ -1,9 +1,9 @@
 use std::{net::SocketAddr, sync::Arc, sync::Mutex};
 use axum::{extract::{ws::Message, ConnectInfo, State, WebSocketUpgrade}, response::Response, routing::get, Router};
 use futures::{Sink, SinkExt, Stream, StreamExt};
+use messages::ClientMessage;
 use state::AppState;
 use tokio::net::TcpListener;
-use crate::messages::process_messsage;
 
 #[cfg(test)]
 mod tests;
@@ -44,9 +44,9 @@ async fn handle_socket<
     state: Arc<Mutex<AppState>>
 ) {
     while let Some(Ok(Message::Text(message))) = receiver.next().await {
-        let response: serde_json::Value = match serde_json::from_str::<messages::Message>(&message) {
+        let response: serde_json::Value = match serde_json::from_str::<messages::ClientMessage>(&message) {
             Err(_) => todo!(),
-            Ok(message) => process_messsage(message, socket_address, state.clone()).await.unwrap()
+            Ok(message) => ClientMessage::process(message, socket_address, state.clone()).await.unwrap()
         };
         if sender.send(Message::Text(response.to_string())).await.is_err() { break; }
     }
