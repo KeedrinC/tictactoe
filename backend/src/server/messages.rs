@@ -43,10 +43,7 @@ impl ClientMessage {
             None => Some(state.new_session(socket, nickname.clone())),
         };
         if let Some(session) = session {
-            Ok(json!({
-                "type": "Connection",
-                "data": *session
-            }))
+            Ok(json!(*session))
         } else { Err(()) }
     }
 
