@@ -6,6 +6,7 @@ fn setup_session() -> Arc<Mutex<Session>> {
     let session = Session::new(new_socket(1111), Some(String::from("keedrin")));
     Arc::new(Mutex::new(session))
 }
+
 #[test]
 fn test_new_lobby() {
     let session = setup_session();
@@ -14,14 +15,19 @@ fn test_new_lobby() {
     assert!(lobby.game.is_none());
     assert_eq!(lobby.player_count(), 1);
 }
+
 #[test]
 fn test_start_game() {
-    let session = setup_session();
-    let mut lobby = Lobby::new(session);
+    let player = setup_session();
+    let friend = setup_session();
+    friend.lock().unwrap().set_nickname("friend");
+    let mut lobby = Lobby::new(player);
+    lobby.add_player(friend);
     assert!(lobby.game.is_none());
     lobby.start_game();
     assert!(lobby.game.is_some());
 }
+
 #[test]
 fn test_add_and_remove_player() {
     let session = setup_session();
@@ -32,6 +38,7 @@ fn test_add_and_remove_player() {
     assert!(!lobby.has_players());
     assert_eq!(lobby.player_count(), 0);
 }
+
 #[test]
 fn test_add_players() {
     let session = setup_session();
@@ -45,6 +52,7 @@ fn test_add_players() {
     assert!(lobby.has_players());
     assert_eq!(lobby.player_count(), 2);
 }
+
 #[test]
 fn test_has_players() {
     let session = setup_session();
