@@ -19,9 +19,8 @@ async fn setup(state: Arc<Mutex<AppState>>, connection: Option<SocketAddr>) -> (
 
 #[tokio::test]
 async fn test_multiple_new_connections() {
-    #[derive(Debug, Deserialize)]
-    struct Session { nickname: Option<String>, access_token: String }
-
+    #[derive(Deserialize)]
+    struct Session { access_token: String, nickname: Option<String> }
     let state = mock_state(); // shared state between connections
     let (mut tx, mut rx) = setup(state.clone(), Some(new_socket(1111))).await;
     let (mut tx2, mut rx2) = setup(state.clone(), Some(new_socket(2222))).await;
@@ -29,17 +28,11 @@ async fn test_multiple_new_connections() {
     tx.send(Ok(Message::Text(json!({"Connection": {"nickname": "keedrin"}}).to_string()))).await.unwrap();
     tx2.send(Ok(Message::Text(json!({"Connection": {"nickname": "keedrin2"}}).to_string()))).await.unwrap();
 
-    let msg = match rx.next().await.unwrap() {
-        Message::Text(msg) => msg,
-        other => panic!("expected a text message but got {other:?}"),
-    };
-    let msg2 = match rx2.next().await.unwrap() {
-        Message::Text(msg) => msg,
-        other => panic!("expected a text message but got {other:?}"),
-    };
+    let msg = rx.next().await.unwrap();
+    let msg2 = rx2.next().await.unwrap();
 
     let state = state.lock().unwrap();
-    let response = serde_json::from_str::<Session>(&msg).unwrap();
+    let response = serde_json::from_str::<Session>(&msg.to_text().unwrap()).unwrap();
     let record = state.sessions.get(&response.access_token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
@@ -48,7 +41,7 @@ async fn test_multiple_new_connections() {
     assert!(record.nickname.is_some());
     assert_eq!(record.nickname.unwrap(), String::from("keedrin"));
 
-    let response = serde_json::from_str::<Session>(&msg2).unwrap();
+    let response = serde_json::from_str::<Session>(&msg2.to_text().unwrap()).unwrap();
     let record = state.sessions.get(&response.access_token);
     assert!(record.is_some());
     let record = record.unwrap().lock().unwrap().clone();
