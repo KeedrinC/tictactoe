@@ -7,10 +7,10 @@ export default function Home() {
             <div class="px-4 py-8 mx-auto bg-[#86efac]">
                 <div class="max-w-screen-md mx-auto flex flex-col items-center justify-center">
                     <img
-                        class="my-6"
+                        class="mb-6"
                         src="/logo.svg"
-                        width="222"
-                        height="222"
+                        width="256"
+                        height="256"
                         alt="the Fresh logo: a sliced lemon dripping with juice"
                     />
                     <GameView />
