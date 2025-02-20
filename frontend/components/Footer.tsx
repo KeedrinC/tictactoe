@@ -1,5 +1,7 @@
-export default function Footer() {
+export default function Footer({ class: style }: { class: string}) {
     return (
-        <span class="text-center">made by Keedrin&Co.</span>
+        <div class={style}>
+            <span class="text-center">made by Keedrin&Co.</span>
+        </div>
     )
 }

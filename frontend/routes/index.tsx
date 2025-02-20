@@ -16,9 +16,7 @@ export default function Home() {
                     <GameView />
                 </div>
             </div>
-            <div class="py-4 mx-auto">
-                <Footer />
-            </div>
+            <Footer class="py-4 mx-auto" />
         </>
     );
 }
