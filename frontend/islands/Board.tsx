@@ -7,7 +7,7 @@ const boardStyle = {
     square: "flex p-10 rounded-lg bg-gray-300 group text-7xl",
 };
 
-export function Board({ game: g }: { game: GameType }) {
+export default function Board({ game: g }: { game: GameType }) {
     const game = useSignal(g);
     const grid = Array.from({length: 9}).map((_, id) =>
         <Square id={id} game={game} />);
