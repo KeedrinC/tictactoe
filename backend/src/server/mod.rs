@@ -1,7 +1,13 @@
 use std::{net::SocketAddr, sync::Arc, sync::Mutex};
-use axum::{extract::{ws::Message, ConnectInfo, State, WebSocketUpgrade}, response::Response, routing::get, Router};
+use axum::{
+    extract::{ws::Message, connect_info::ConnectInfo, State, WebSocketUpgrade},
+    response::Response,
+    routing::any,
+    Router
+};
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use messages::ClientMessage;
+use serde_json::json;
 use state::AppState;
 use tokio::net::TcpListener;
 
@@ -16,10 +22,14 @@ mod state;
 pub async fn main() {
     let listener: TcpListener = TcpListener::bind("0.0.0.0:80").await.unwrap();
     let state: AppState = AppState::new();
-    let app: Router = Router::new().route("/ws", get(handshake)).with_state(Arc::new(Mutex::new(state)));
-    tracing_subscriber::fmt::init();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app)
+    let app: Router = Router::new()
+        .route("/ws", any(handshake))
+        .with_state(Arc::new(Mutex::new(state)));
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+    tracing::info!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
@@ -30,6 +40,7 @@ async fn handshake(
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<Mutex<AppState>>>
 ) -> Response {
+    tracing::info!("new connection from {}:{}", address.ip(), address.port());
     ws.on_upgrade(move |socket| {
         let (sender, receiver) = socket.split();
         handle_socket(sender, receiver, address, state)
@@ -43,12 +54,17 @@ async fn handle_socket<
     socket_address: SocketAddr,
     state: Arc<Mutex<AppState>>
 ) {
-    while let Some(Ok(Message::Text(message))) = receiver.next().await {
-        let response: serde_json::Value = match serde_json::from_str::<messages::ClientMessage>(&message) {
-            Err(_) => todo!(),
-            Ok(message) => ClientMessage::process(message, socket_address, state.clone()).await.unwrap()
-        };
-        if sender.send(Message::Text(response.to_string())).await.is_err() { break; }
+    while let Some(Ok(message)) = receiver.next().await {
+        match message {
+            Message::Text(message) => {
+                let response: serde_json::Value = match serde_json::from_str::<messages::ClientMessage>(&message) {
+                    Err(error) => { json!({"type": "Error", "data": error.to_string()}) },
+                    Ok(message) => ClientMessage::process(message, socket_address, state.clone()).await.unwrap()
+                };
+                if sender.send(Message::Text(response.to_string().into())).await.is_err() { break; }
+            },
+            _ => {}
+        }
     }
 }
 
