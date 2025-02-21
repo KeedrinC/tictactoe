@@ -1,34 +1,35 @@
 import { Signal, useSignal } from "@preact/signals";
-import { GameType } from "../components/types.tsx";
+import Game from "../lib/Game.tsx";
 
 const boardStyle = {
-    container: "flex",
-    grid: "flex p-4 rounded-xl grid grid-cols-3 gap-4 bg-white",
-    square: "flex p-10 rounded-lg bg-gray-300 group text-7xl",
+    grid: "flex p-3 rounded-xl grid grid-cols-3 gap-3 bg-white",
+    square: "flex p-7 rounded-lg bg-gray-300 group text-7xl",
 };
 
-export default function Board({ game: g }: { game: GameType }) {
+export default function Board({ socket, game: g }: { socket?: WebSocket, game?: Game }) {
     const game = useSignal(g);
-    const grid = Array.from({length: 9}).map((_, id) =>
-        <Square id={id} game={game} />);
-    return (
-        <div class={boardStyle.container}>
-            <div class={boardStyle.grid}>{grid}</div>
-        </div>
-    );
+    const grid = Array.from({length: 9}).map((_, position) =>
+        <Square key={position} position={position} game={game} socket={socket} />);
+    return <div class={boardStyle.grid}>{grid}</div>;
 }
 
-function Square({ id, game }: { id: number, game: Signal<GameType>}) {
-    const { value: { board, playerType } } = game;
-    const squareClass = board[id] ? "visible" : "opacity-0 group-hover:opacity-100";
-    const squareText = board[id] ? board[id] : playerType;
-    const makeMove = () => {
-        if (!playerType) return;
-        if (!board[id]) board[id] = playerType;
-        game.value = { playerType, board };
+interface SquareProps {
+    socket?: WebSocket,
+    position: number,
+    game?: Signal<Game | undefined>
+}
+
+function Square({ socket, position, game }: SquareProps) {
+    const { board, player } = game?.value || {};
+    const squareClass = board?.[position] ? "visible" : game?.value ? "opacity-0 group-hover:opacity-100" : "invisible";
+    const squareText = board?.[position] ?? player ?? "-";
+    const handleMove = () => {
+        if (!(game?.value && socket)) return;
+        const request = { type: "Move", position };
+        socket.send(JSON.stringify(request));
     }
     return (
-        <div class={boardStyle.square} onClick={makeMove}>
+        <div class={boardStyle.square} onClick={handleMove}>
             <span class={squareClass}>{squareText}</span>
         </div>
     );
