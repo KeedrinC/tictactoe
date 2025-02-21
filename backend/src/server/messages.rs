@@ -18,7 +18,7 @@ pub enum ClientMessage { // these are messages that should be received by the co
 }
 
 impl ClientMessage {
-    pub async fn process(message: ClientMessage, socket: SocketAddr, state: Arc<Mutex<AppState>>) -> Result<Value, ()> {
+    pub async fn process(message: ClientMessage, socket: SocketAddr, state: Arc<Mutex<AppState>>) -> Result<Value, String> {
         // when we get a message from a client we pass information about the client to its corresponding function
         let state: Arc<Mutex<AppState>> = state.clone();
         match message {
@@ -37,7 +37,7 @@ impl ClientMessage {
         socket: SocketAddr,
         nickname: Option<String>,
         access_token: Option<String>
-    ) -> Result<serde_json::Value, ()> {
+    ) -> Result<serde_json::Value, String> {
         let mut state = state.lock().unwrap();
         let session = match &access_token {
             Some(access_token) => state.move_session(socket, access_token),
@@ -51,12 +51,12 @@ impl ClientMessage {
             tracing::info!("new_connection {}", response);
             tracing::info!("new_connection number of sessions {}", state.sessions.len());
             Ok(response)
-        } else { Err(()) }
+        } else { Err("could not connect".to_string()) }
     }
 
-    fn change_nickname(state: Arc<Mutex<AppState>>, socket: SocketAddr, nickname: String) -> Result<serde_json::Value, ()>  {
+    fn change_nickname(state: Arc<Mutex<AppState>>, socket: SocketAddr, nickname: String) -> Result<serde_json::Value, String>  {
         let state = state.lock().unwrap();
-        let session = state.socket_session.get(&socket).ok_or(()).cloned()?;
+        let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;
         let mut session_guard = session.lock().unwrap();
         session_guard.set_nickname(&nickname);
         let response = json!({
@@ -67,9 +67,9 @@ impl ClientMessage {
         Ok(response)
     }
 
-    fn create_lobby(state: Arc<Mutex<AppState>>, socket: SocketAddr) -> Result<serde_json::Value, ()> {
+    fn create_lobby(state: Arc<Mutex<AppState>>, socket: SocketAddr) -> Result<serde_json::Value, String> {
         let mut state = state.lock().unwrap();
-        let session = state.socket_session.get(&socket).ok_or(()).cloned()?;
+        let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;
         let new_lobby = state.new_lobby(session.clone());
         let lobby_guard = new_lobby.lock().unwrap();
         let response = json!({
@@ -81,10 +81,10 @@ impl ClientMessage {
         Ok(response)
     }
 
-    fn join_lobby(state: Arc<Mutex<AppState>>, socket: SocketAddr, code: String) -> Result<serde_json::Value, ()> {
+    fn join_lobby(state: Arc<Mutex<AppState>>, socket: SocketAddr, code: String) -> Result<serde_json::Value, String> {
         let mut state = state.lock().unwrap();
-        let session = state.socket_session.get(&socket).ok_or(()).cloned()?;
-        let lobby = state.join_lobby(&code, session.clone())?;
+        let session = state.socket_session.get(&socket).ok_or("couldn't find session").cloned()?;
+        let lobby = state.join_lobby(&code, session.clone()).map_err(|_| "couldn't join lobby")?;
         let lobby_guard = lobby.lock().unwrap();
         let response = json!({
             "type": "Lobby",
@@ -94,11 +94,11 @@ impl ClientMessage {
         Ok(response)
     }
     
-    fn start_game(state: Arc<Mutex<AppState>>, socket: SocketAddr) -> Result<serde_json::Value, ()>  {
+    fn start_game(state: Arc<Mutex<AppState>>, socket: SocketAddr) -> Result<serde_json::Value, String>  {
         let state = state.lock().unwrap();
-        let session = state.socket_session.get(&socket).ok_or(()).cloned()?;
+        let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;
         let session_token = &session.lock().unwrap().access_token;
-        let lobby = state.session_lobby.get(session_token).ok_or(()).cloned()?;
+        let lobby = state.session_lobby.get(session_token).ok_or("couldn't find lobby based on session").cloned()?;
         let mut lobby_guard = lobby.lock().unwrap();
         lobby_guard.start_game(); // start the game attached to the lobby
         let response = json!({
@@ -109,11 +109,11 @@ impl ClientMessage {
         Ok(response)
     }
 
-    fn move_message(state: Arc<Mutex<AppState>>, socket: SocketAddr, position: usize) -> Result<serde_json::Value, ()> {
+    fn move_message(state: Arc<Mutex<AppState>>, socket: SocketAddr, position: usize) -> Result<serde_json::Value, String> {
         let state = state.lock().unwrap();
-        let session = state.socket_session.get(&socket).ok_or(()).cloned()?;
+        let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;
         let session_token = &session.lock().unwrap().access_token;
-        let lobby = state.session_lobby.get(session_token).ok_or(()).cloned()?;
+        let lobby = state.session_lobby.get(session_token).ok_or("couldn't find lobby based on session").cloned()?;
         let mut lobby_guard = lobby.lock().unwrap();
         let players = lobby_guard.players.clone();
         if let Some(game) = lobby_guard.game.as_mut() {
@@ -132,6 +132,6 @@ impl ClientMessage {
             tracing::info!("move_message {}", response);
             return Ok(response);
         }
-        Err(())
+        Err("unhandled error".to_string())
     }
 }
