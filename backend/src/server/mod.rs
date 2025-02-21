@@ -59,7 +59,9 @@ async fn handle_socket<
             Message::Text(message) => {
                 let response: serde_json::Value = match serde_json::from_str::<messages::ClientMessage>(&message) {
                     Err(error) => { json!({"type": "Error", "data": error.to_string()}) },
-                    Ok(message) => ClientMessage::process(message, socket_address, state.clone()).await.unwrap()
+                    Ok(message) =>
+                        ClientMessage::process(message, socket_address, state.clone()).await
+                            .map_or_else(|error| json!({"type": "Error", "data": error}), |message| message)
                 };
                 if sender.send(Message::Text(response.to_string().into())).await.is_err() { break; }
             },
