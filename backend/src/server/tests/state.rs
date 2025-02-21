@@ -147,4 +147,5 @@ fn test_leave_lobby() {
     state.leave_lobby(&player); // should be one player left, we only remove the session_lobby entry
     assert_eq!(friend_lobby.lock().unwrap().player_count(), 1); // only one should be in the lobby
     state.leave_lobby(&friend); // should be no players left, we the session_lobby entry and lobbies entry
+    assert_eq!(friend_lobby.lock().unwrap().player_count(), 0);
 }
