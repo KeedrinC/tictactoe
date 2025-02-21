@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { Lobby, Session } from "../components/types.tsx";
+import { Lobby, Session } from "../lib/types.tsx";
 import Board from "./Board.tsx";
 import LobbyView from "./Lobby.tsx";
 import Game from "../lib/Game.tsx";

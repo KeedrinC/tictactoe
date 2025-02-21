@@ -1,4 +1,4 @@
-import { BoardType, PlayerType } from "../components/types.tsx";
+import { BoardType, PlayerType } from "./types.tsx";
 
 export default class Game {
     socket: WebSocket;

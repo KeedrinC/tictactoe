@@ -1,5 +1,5 @@
 import { Dispatch, StateUpdater, useEffect, useState } from "preact/hooks";
-import { Lobby } from "../components/types.tsx";
+import { Lobby } from "../lib/types.tsx";
 
 enum CurrentView { JoinLobby, LobbyDetails }
 

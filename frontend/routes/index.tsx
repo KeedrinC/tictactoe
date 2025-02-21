@@ -1,5 +1,4 @@
-import Footer from "../components/Footer.tsx";
-import GameView from "../islands/Game.tsx";
+import Footer from "../com../lib/types.tsxport GameView from "../islands/Game.tsx";
 
 export default function Home() {
     return (
