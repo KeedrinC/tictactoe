@@ -27,7 +27,7 @@ impl AppState {
         let new_lobby: Arc<Mutex<Lobby>> = Arc::new(Mutex::new(lobby.clone()));
         let session_token: String = player_session.lock().unwrap().access_token.clone();
         if self.session_lobby.contains_key(&session_token) {
-            self.leave_lobby(player_session.clone()) // leave the previous lobby 
+            self.leave_lobby(&player_session) // leave the previous lobby 
         }
         // add to both self.lobbies and self.session_lobby for lobby lookup using session
         self.lobbies.insert(lobby.code, new_lobby.clone());
@@ -60,7 +60,7 @@ impl AppState {
         let session_token: String = player_session.lock().unwrap().access_token.clone();
         // Check if the session is already in a session, then leave it
         if self.session_lobby.contains_key(&session_token) {
-            self.leave_lobby(player_session.clone());
+            self.leave_lobby(&player_session);
         };
         let lobby = self.lobbies.get(lobby_code).ok_or(()).cloned()?;
         // Now that the user isn't in a session, add them to a session and insert into session_lobby
@@ -73,7 +73,7 @@ impl AppState {
     }
 
     /// Check if the user is currently in a lobby, and remove them from the lobby if they are.
-    pub fn leave_lobby(&mut self, session: Arc<Mutex<Session>>) {
+    pub fn leave_lobby(&mut self, session: &Arc<Mutex<Session>>) {
         let session_token = session.lock().unwrap().access_token.clone();
         let previous_lobby = self.session_lobby.get(&session_token).cloned();
         if let Some(lobby) = previous_lobby {
