@@ -1,16 +1,38 @@
 use std::sync::{Arc, Mutex};
 use game::{Game, Player};
 use rand::{thread_rng, Rng};
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 use crate::session::Session;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Lobby {
     pub code: String,
-    #[serde(skip)]
     pub game: Option<Game>,
-    #[serde(skip)]
     pub players: [Option<(Arc<Mutex<Session>>, Player)>; 2]
+}
+
+impl Serialize for Lobby {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        #[derive(Serialize)]
+        struct SerializedPlayer { port: u16, symbol: String }
+        let p: Vec<Option<SerializedPlayer>> = self.players.iter().map(|player|
+            if let Some((session, player)) = player {
+                let session = session.lock().unwrap();
+                Some(SerializedPlayer {
+                    port: session.socket.port(),
+                    symbol: match player {
+                        Player::X => "X".to_string(),
+                        Player::O => "O".to_string(),
+                    }
+                })
+            } else { None }
+        ).collect();
+        let mut s = serializer.serialize_struct("Lobby", 3)?;
+        s.serialize_field("code", &self.code)?;
+        s.serialize_field("players", &p)?;
+        s.end()
+    }
 }
 
 impl PartialEq for Lobby {
