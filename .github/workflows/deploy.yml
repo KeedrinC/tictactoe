@@ -23,14 +23,6 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - name: Install step
-        run: "cd frontend"
-
       - name: Build step
         run: "deno task build"
 
@@ -39,6 +31,6 @@ jobs:
         with:
           project: "noisy-amoeba-65"
           entrypoint: "main.ts"
-          root: "."
+          root: "frontend"
           
           
