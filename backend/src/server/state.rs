@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use serde_json::{json, Value};
+use tokio::sync::broadcast::{Receiver, Sender};
 use crate::lobby::Lobby;
 use crate::session::Session;
 
-#[derive(Clone)]
 pub struct AppState {
     pub lobbies: HashMap<String, Arc<Mutex<Lobby>>>,    // lobbies with currently active users
     pub sessions: HashMap<String, Arc<Mutex<Session>>>, // every connection creates a session object
     pub session_lobby: HashMap<String, Arc<Mutex<Lobby>>>, // map sessions to current lobbies for easy lookup
     pub socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>>,   // map sockets to session for easy lookup
+    pub lobby_channel: HashMap<String, (Sender<Value>, Receiver<Value>)>,   // map sockets to session for easy lookup
 }
 
 impl AppState {
@@ -19,7 +21,8 @@ impl AppState {
         let sessions: HashMap<String, Arc<Mutex<Session>>> = HashMap::new();
         let session_lobby: HashMap<String, Arc<Mutex<Lobby>>> = HashMap::new();
         let socket_session: HashMap<SocketAddr, Arc<Mutex<Session>>> = HashMap::new();
-        AppState { lobbies, sessions, socket_session, session_lobby }
+        let lobby_channel: HashMap<String, (Sender<Value>, Receiver<Value>)> = HashMap::new();
+        AppState { lobbies, sessions, session_lobby, socket_session, lobby_channel }
     }
 
     pub fn new_lobby(&mut self, player_session: Arc<Mutex<Session>>) -> Arc<Mutex<Lobby>> {
@@ -29,9 +32,15 @@ impl AppState {
         if self.session_lobby.contains_key(&session_token) {
             self.leave_lobby(&player_session) // leave the previous lobby 
         }
+        let (sender, receiver) = tokio::sync::broadcast::channel::<Value>(lobby.code.parse::<usize>().unwrap());
+        let _ = sender.send(json!({"data": ""}));
         // add to both self.lobbies and self.session_lobby for lobby lookup using session
-        self.lobbies.insert(lobby.code, new_lobby.clone());
+        self.lobby_channel.insert(lobby.code.clone(), (sender, receiver));
+        self.lobbies.insert(lobby.code.clone(), new_lobby.clone());
         self.session_lobby.insert(session_token, new_lobby.clone());
+        if let Some((sender, _)) = self.lobby_channel.get(&lobby.code.clone()) {
+            let _ = sender.send(json!({"data": ""}));
+        }
         new_lobby
     }
 
