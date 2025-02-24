@@ -1,15 +1,15 @@
 use std::{net::SocketAddr, sync::Arc, sync::Mutex};
 use axum::{
-    extract::{ws::Message, connect_info::ConnectInfo, State, WebSocketUpgrade},
+    extract::{connect_info::ConnectInfo, ws::Message, State, WebSocketUpgrade},
     response::Response,
     routing::any,
     Router
 };
 use futures::{Sink, SinkExt, Stream, StreamExt};
 use messages::ClientMessage;
-use serde_json::json;
+use serde_json::{json, Value};
 use state::AppState;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::broadcast::Sender};
 
 #[cfg(test)]
 mod tests;
@@ -66,8 +66,24 @@ async fn handle_socket<
                 if sender.send(Message::Text(response.to_string().into())).await.is_err() { break; }
             },
             _ => {}
+        };
+        if let Some(channel) = get_lobby_channel(state.clone(), socket_address) {
+            let mut rx = channel.subscribe();
+            while let Ok(msg) = rx.recv().await {
+                tracing::info!("{}", msg);
+                if sender.send(Message::text(msg.to_string())).await.is_err() { break; }
+            }
         }
     }
+    
+}
+
+fn get_lobby_channel(state: Arc<Mutex<AppState>>, socket_address: SocketAddr) -> Option<Sender<Value>> {
+    let state = state.lock().unwrap();
+    let session = state.socket_session.get(&socket_address)?.lock().unwrap();
+    let lobby = state.session_lobby.get(&session.access_token)?.lock().unwrap();
+    let channel = state.lobby_channel.get(&lobby.code.clone())?;
+    Some(channel.0.clone())
 }
 
 async fn shutdown_signal() {

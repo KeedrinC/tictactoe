@@ -91,6 +91,9 @@ impl ClientMessage {
             "data": *lobby_guard
         });
         tracing::info!("join_lobby {}", response);
+        if let Some((sender, _)) = state.lobby_channel.get(&lobby_guard.code) {
+            let _ = sender.send(response.clone());
+        }
         Ok(response)
     }
     
