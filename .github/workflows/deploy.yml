@@ -15,9 +15,6 @@ jobs:
       contents: read # Needed to clone the repository
 
     steps:
-      - name: Build step
-        run: "cd frontend"
-        
       - name: Clone repository
         uses: actions/checkout@v4
 
@@ -25,6 +22,14 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install step
+        run: "cd frontend"
 
       - name: Build step
         run: "deno task build"
