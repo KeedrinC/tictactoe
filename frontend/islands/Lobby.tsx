@@ -3,7 +3,7 @@ import { Lobby } from "../lib/types.tsx";
 
 enum CurrentView { JoinLobby, LobbyDetails }
 
-export default function LobbyView({ socket, lobby, error }: { socket: WebSocket, lobby?: Lobby, error?: string }) {
+export default function LobbyView({ socket, lobby, error, server_url }: { socket: WebSocket, lobby?: Lobby, error?: string, server_url: string }) {
     const [view, setView] = useState<CurrentView>(
         // CurrentView.JoinLobby
         // CurrentView.LobbyDetails
@@ -17,7 +17,7 @@ export default function LobbyView({ socket, lobby, error }: { socket: WebSocket,
         case CurrentView.JoinLobby:
             return <JoinLobby socket={socket} setView={setView} error={error} />;
         case CurrentView.LobbyDetails:
-            return <LobbyDetails lobby={lobby!} error={error} />;
+            return <LobbyDetails lobby={lobby!} error={error} server_url={server_url} />;
         default:
             return <ActionButtons socket={socket} setView={setView} error={error} />;
     }
@@ -53,9 +53,8 @@ function JoinLobby({ socket, setView }: { socket: WebSocket, setView: Dispatch<S
     )
 }
 
-function LobbyDetails({ lobby }: { lobby: Lobby, error?: string }) {
+function LobbyDetails({ lobby, server_url }: { lobby: Lobby, error?: string, server_url: string }) {
     const { code } = lobby ?? { code: "1234"};
-    const url: string = globalThis.location.host;
     const CodeView = Array.from(code).map((n, i) =>
         <span key={i} class="flex rounded-lg p-3 bg-slate-800 text-white font-bold my-auto">{n}</span>);
     return (
@@ -66,8 +65,8 @@ function LobbyDetails({ lobby }: { lobby: Lobby, error?: string }) {
                     Have a friend enter this 4 digit code
                     or send them this quick link.
                 </p>
-                <a href={`http://${url}/#${code}`}>
-                    http://{url}/#{code}
+                <a href={`${server_url}/#${code}`}>
+                    {server_url}/#{code}
                 </a>
             </div>
         </div>

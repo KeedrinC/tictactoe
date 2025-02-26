@@ -4,9 +4,8 @@ import Board from "./Board.tsx";
 import LobbyView from "./Lobby.tsx";
 import Game from "../lib/Game.tsx";
 
-function setup(on_message: (socket: WebSocket, data: { data: string }) => void): WebSocket {
-    const url = new URL("/ws", location.origin.replace("http", "ws"));
-    url.port = "80";
+function setup(server_url: string, on_message: (socket: WebSocket, data: { data: string }) => void): WebSocket {
+    const url = new URL("/ws", server_url);
     const socket = new WebSocket(url);
     socket.onopen = () => {
         console.log("Connected to WebSocket server");
@@ -21,14 +20,14 @@ function setup(on_message: (socket: WebSocket, data: { data: string }) => void):
     return socket;
 }
 
-export default function GameView() {
+export default function GameView({ server_url }: { server_url: string }) {
     const [error, setError] = useState<string>();
     const [_, setSession] = useState<Session>();
     const [lobby, setLobby] = useState<Lobby>();
     const [game, setGame] = useState<Game>();
     const [socket, setSocket] = useState<WebSocket>();
     useEffect(() => { // establish websocket connection and handle messages
-        const ws = setup((socket, { data: d }) => {
+        const ws = setup(server_url, (socket, { data: d }) => {
             const response = JSON.parse(d);
             console.log("Message from server:", response)
             const { type, data } = response;
@@ -50,7 +49,7 @@ export default function GameView() {
     }, []);
     return (
         <div class="flex flex-col gap-4 justify-items-center w-sm max-w-sm min-w-sm">
-            {socket && <LobbyView lobby={lobby} socket={socket} error={error} /> }
+            {socket && <LobbyView lobby={lobby} socket={socket} error={error} server_url={server_url} /> }
             <Board socket={socket} game={game} />
         </div>
     );
