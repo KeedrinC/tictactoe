@@ -119,22 +119,23 @@ impl ClientMessage {
         let lobby = state.session_lobby.get(session_token).ok_or("couldn't find lobby based on session").cloned()?;
         let mut lobby_guard = lobby.lock().unwrap();
         let players = lobby_guard.players.clone();
-        if let Some(game) = lobby_guard.game.as_mut() {
-            let player = players.iter().find(|&entry| {
-                entry.clone().is_some_and(|(s, p)|
-                    Arc::ptr_eq(&session, &s)
-                        && game.current_player.eq(&Some(p)))
-            });
-            if let Some(Some((_, player))) = player {
-                let _ = game.move_player(player, position);
-            }
-            let response = json!({
-                "type": "Move",
-                "data": game.board
-            });
-            tracing::info!("move_message {}", response);
-            return Ok(response);
+        match lobby_guard.game.as_mut() {
+            Some(game) => {
+                let x = players.iter().find(|player| {
+                    player.as_ref().is_some_and(|(s, p)|
+                        Arc::ptr_eq(&session, &s) && game.current_player.eq(&Some(*p))
+                )});
+                if let Some(Some((_, player))) = x {
+                    let _ = game.move_player(player, position);
+                }
+                let response = json!({
+                    "type": "Move",
+                    "data": game.board
+                });
+                tracing::info!("move_message {}", response);
+                Ok(response)
+            },
+            None => Err("game hasn't started yet".to_string()),
         }
-        Err("unhandled error".to_string())
     }
 }
