@@ -1,8 +1,11 @@
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 use serde_json::{json, Value};
 use std::sync::Mutex;
 use std::net::SocketAddr;
+use game::Player;
 use serde::Deserialize;
+use crate::lobby::Lobby;
+use crate::session::Session;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize, Eq, Hash, PartialEq)]
@@ -14,7 +17,8 @@ pub enum ClientMessage { // these are messages that should be received by the co
     CreateLobby,                            // creates a new lobby for the current session
     JoinLobby { code: String },             // moves the current session to an existing lobby
     StartGame,
-    Move { position: usize }                // move the session to a spot in their game
+    Move { position: usize },                // move the session to a spot in their game
+    OnHover { position: usize }                // made when a player's mouse is hovered over a square
 }
 
 impl ClientMessage {
@@ -29,6 +33,7 @@ impl ClientMessage {
             ClientMessage::JoinLobby { code } => ClientMessage::join_lobby(state, socket, code),
             ClientMessage::StartGame => ClientMessage::start_game(state, socket),
             ClientMessage::Move { position } => ClientMessage::move_message(state, socket, position),
+            ClientMessage::OnHover { position } => ClientMessage::on_hover(state, socket, position),
         }
     }
 
@@ -94,6 +99,7 @@ impl ClientMessage {
         if let Some((sender, _)) = state.lobby_channel.get(&lobby_guard.code) {
             let _ = sender.send(response.clone());
         }
+        send_message(&mut state, &lobby_guard, &response);
         Ok(response)
     }
     
@@ -137,5 +143,49 @@ impl ClientMessage {
             },
             None => Err("game hasn't started yet".to_string()),
         }
+    }
+
+    fn on_hover(state: Arc<Mutex<AppState>>, socket: SocketAddr, position: usize) -> Result<serde_json::Value, String> {
+        let mut state = state.lock().unwrap();
+        let session = get_socket_session(&mut state, socket)?;
+        let session_guard = session.lock().unwrap();
+        let lobby = get_socket_lobby(&mut state, &session_guard)?;
+        let lobby_guard = lobby.lock().unwrap();
+        let (_, player) = lobby_guard.players.iter().find(|player| {
+            player.as_ref().is_some_and(|(s, _)| Arc::ptr_eq(&session, &s))
+        }).unwrap().clone().unwrap();
+        match &lobby_guard.game {
+            Some(game) => {
+                if game.current_player.eq(&Some(player)) {
+                    let message = json!({
+                        "type": "OnHover",
+                        "data": {"symbol": match player {
+                            Player::X => "X",
+                            Player::O => "O",
+                        }, "position": position}
+                    });
+                    send_message(&mut state, &lobby_guard, &message);
+                    Ok(json!({}))
+                } else { Err("not this player's turn".to_owned()) }
+            },
+            None => Err("lobby doesn't have a game".to_owned()),
+        }
+    }
+}
+
+fn get_socket_session(state: &mut MutexGuard<AppState>, socket: SocketAddr) -> Result<Arc<Mutex<Session>>, String> {
+    let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;
+    Ok(session)
+}
+
+fn get_socket_lobby(state: &mut MutexGuard<AppState>, session: &MutexGuard<Session>) -> Result<Arc<Mutex<Lobby>>, String> {
+    let session_token = &session.access_token;
+    let lobby = state.session_lobby.get(session_token).ok_or("couldn't find lobby based on session").cloned()?;
+    Ok(lobby)
+}
+
+fn send_message(state: &mut MutexGuard<AppState>, lobby: &MutexGuard<Lobby>, message: &Value) {
+    if let Some((sender, _)) = state.lobby_channel.get(&lobby.code) {
+        let _ = sender.send(message.clone());
     }
 }
