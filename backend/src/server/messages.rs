@@ -102,7 +102,7 @@ impl ClientMessage {
         send_message(&mut state, &lobby_guard, &response);
         Ok(response)
     }
-    
+
     fn start_game(state: Arc<Mutex<AppState>>, socket: SocketAddr) -> Result<serde_json::Value, String>  {
         let state = state.lock().unwrap();
         let session = state.socket_session.get(&socket).ok_or("couldn't find session based on socket").cloned()?;

@@ -30,7 +30,7 @@ impl AppState {
         let new_lobby: Arc<Mutex<Lobby>> = Arc::new(Mutex::new(lobby.clone()));
         let session_token: String = player_session.lock().unwrap().access_token.clone();
         if self.session_lobby.contains_key(&session_token) {
-            self.leave_lobby(&player_session) // leave the previous lobby 
+            self.leave_lobby(&player_session) // leave the previous lobby
         }
         let (sender, receiver) = tokio::sync::broadcast::channel::<Value>(lobby.code.parse::<usize>().unwrap());
         let _ = sender.send(json!({"data": ""}));

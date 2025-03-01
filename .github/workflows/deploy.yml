@@ -32,5 +32,3 @@ jobs:
           project: "noisy-amoeba-65"
           entrypoint: "main.ts"
           root: "frontend"
-          
-          

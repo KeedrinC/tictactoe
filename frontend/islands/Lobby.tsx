@@ -24,7 +24,7 @@ export default function LobbyView({ socket, lobby, error, server_url }: { socket
 }
 
 const buttonStyle = "grow p-4 rounded-lg bg-slate-50 dark:bg-slate-800 font-bold text-white text-center";
-const Button = ({ class: c, text, onClick }: { class?: string, text: string, onClick?: () => void }) => 
+const Button = ({ class: c, text, onClick }: { class?: string, text: string, onClick?: () => void }) =>
     <button type="button" class={`${buttonStyle} ${c}`} onClick={onClick}>{text}</button>;
 
 function JoinLobby({ socket, setView }: { socket: WebSocket, setView: Dispatch<StateUpdater<CurrentView | undefined>>, error?: string }) {

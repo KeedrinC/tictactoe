@@ -57,7 +57,7 @@ async fn handle_socket<
     while let Some(Ok(message)) = receiver.next().await {
         match message {
             Message::Text(message) => {
-                let response: serde_json::Value = match serde_json::from_str::<messages::ClientMessage>(&message) {
+                let response = match serde_json::from_str::<messages::ClientMessage>(&message) {
                     Err(error) => { json!({"type": "Error", "data": error.to_string()}) },
                     Ok(message) =>
                         ClientMessage::process(message, socket_address, state.clone()).await
@@ -75,7 +75,6 @@ async fn handle_socket<
             }
         }
     }
-    
 }
 
 fn get_lobby_channel(state: Arc<Mutex<AppState>>, socket_address: SocketAddr) -> Option<Sender<Value>> {

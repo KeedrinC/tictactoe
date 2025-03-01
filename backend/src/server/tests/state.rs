@@ -65,7 +65,7 @@ fn test_join_lobby_and_leaves_previous_lobby() {
     let friend: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("friend")));
     let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
     let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
-    
+
     let player_token = player.lock().unwrap().access_token.clone();
     let friend_token = friend.lock().unwrap().access_token.clone();
     let player_lobby_guard = player_lobby.lock().unwrap().clone();
@@ -109,7 +109,7 @@ fn test_leave_lobby() {
     let friend: Arc<Mutex<Session>> = state.new_session(new_socket(2222), Some(String::from("friend")));
     let player_lobby: Arc<Mutex<Lobby>> = state.new_lobby(player.clone());
     let friend_lobby: Arc<Mutex<Lobby>> = state.new_lobby(friend.clone());
-    
+
     let player_token = player.lock().unwrap().access_token.clone();
     let friend_token = friend.lock().unwrap().access_token.clone();
     let player_lobby_guard = player_lobby.lock().unwrap().clone();
